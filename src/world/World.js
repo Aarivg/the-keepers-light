@@ -5,6 +5,7 @@ import { buildLighthouse } from './buildings/Lighthouse.js';
 import { buildCottage } from './buildings/Cottage.js';
 import { buildBoathouse } from './buildings/Boathouse.js';
 import { buildEndingTrigger } from './EndingTrigger.js';
+import { buildNPCs } from './NPCs.js';
 import { WORLD_BOUND_RADIUS } from './layout.js';
 
 const SKY_ZENITH = new THREE.Color('#232a3d');
@@ -93,16 +94,19 @@ export class World {
    * Builds the three structures, their clues, ambient props, and the dock's
    * ending trigger. `journal` and `audio` are threaded through to the
    * buildings so clue objects can log to the journal and (for the radio)
-   * play a sound; `onEnding` fires once the player leaves with all clues found.
+   * play a sound; `onEnding` fires once the player leaves with all clues
+   * found; `onTalk(npcId, displayName)` fires when the player interacts
+   * with Mara or Thomas, in place of the usual examine/clue flow.
    */
-  attachInteraction(interactionSystem, uiManager, journal, audio, onEnding) {
+  attachInteraction(interactionSystem, uiManager, journal, audio, dialogue, onEnding, onTalk) {
     const lighthouse = buildLighthouse(this.scene, interactionSystem, uiManager, journal, audio);
     const cottage = buildCottage(this.scene, interactionSystem, uiManager, journal);
     const boathouse = buildBoathouse(this.scene, interactionSystem, uiManager, journal);
     const props = buildProps(this.scene, this._terrain);
-    const ending = buildEndingTrigger(this.scene, interactionSystem, uiManager, journal, onEnding);
+    const ending = buildEndingTrigger(this.scene, interactionSystem, uiManager, journal, dialogue, onEnding);
+    const npcs = buildNPCs(this.scene, interactionSystem, uiManager, this._terrain, onTalk);
 
-    for (const part of [lighthouse, cottage, boathouse, ending]) {
+    for (const part of [lighthouse, cottage, boathouse, ending, npcs]) {
       this._colliders.push(...part.colliders);
       this._groundMeshes.push(...part.groundMeshes);
       this._updatables.push(part);
