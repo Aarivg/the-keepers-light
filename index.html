@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Keeper's Light</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+
+      <div id="hud">
+        <div id="crosshair"></div>
+        <div id="prompt" class="hidden"></div>
+      </div>
+
+      <div id="blocker">
+        <div id="start-screen">
+          <h1>The Keeper's Light</h1>
+          <p class="subtitle">The keeper is gone. The light still turns.</p>
+          <button id="start-button">Click to begin</button>
+          <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; Esc to pause</p>
+        </div>
+      </div>
+
+      <div id="pause-menu" class="hidden">
+        <div class="pause-panel">
+          <h2>Paused</h2>
+
+          <div class="setting-row">
+            <label for="sensitivity-slider">Mouse sensitivity</label>
+            <input type="range" id="sensitivity-slider" min="0.2" max="3" step="0.05" value="1" />
+            <span id="sensitivity-value">1.00</span>
+          </div>
+
+          <div class="setting-row">
+            <label for="invert-y-toggle">Invert Y axis</label>
+            <input type="checkbox" id="invert-y-toggle" />
+          </div>
+
+          <div id="journal-panel-slot"></div>
+
+          <button id="resume-button">Resume</button>
+          <p class="hint">Press Esc to resume</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
