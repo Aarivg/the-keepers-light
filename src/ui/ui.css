@@ -475,3 +475,192 @@ html, body {
 #ending-continue-button:hover {
   background: rgba(232, 228, 216, 0.18);
 }
+
+#ending-npc-summaries {
+  text-align: left;
+  margin: 0 0 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(232, 228, 216, 0.12);
+}
+
+#ending-npc-summaries .npc-summary {
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+#ending-npc-summaries .npc-summary .npc-name {
+  color: #f1ead8;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+#ending-npc-summaries .npc-summary .npc-quote {
+  color: #cfcabb;
+  font-style: italic;
+}
+
+#ending-npc-summaries .npc-summary-empty {
+  color: #7d7a6c;
+  font-style: italic;
+  font-size: 13.5px;
+}
+
+/* ---------- Dialogue (NPC conversation) ---------- */
+
+#dialogue-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 3, 5, 0.75);
+}
+
+.dialogue-panel {
+  width: min(620px, 90vw);
+  max-height: 82vh;
+  padding: 24px 28px;
+  background: rgba(14, 16, 20, 0.95);
+  border: 1px solid rgba(232, 228, 216, 0.15);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialogue-header h2 {
+  margin: 0 0 14px;
+  letter-spacing: 0.04em;
+  color: #f1ead8;
+  font-size: 19px;
+}
+
+#dialogue-log {
+  flex: 1;
+  min-height: 220px;
+  max-height: 42vh;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 8px;
+}
+
+#dialogue-log .line {
+  margin-bottom: 12px;
+  line-height: 1.55;
+  font-size: 14.5px;
+}
+
+#dialogue-log .line.player {
+  color: #a9c4d8;
+}
+
+#dialogue-log .line.player .speaker {
+  color: #7fa8c9;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+#dialogue-log .line.npc {
+  color: #d8d3c4;
+}
+
+#dialogue-log .line.npc .speaker {
+  color: #f1ead8;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+#dialogue-typing {
+  margin: 0 0 8px;
+  font-style: italic;
+  color: #7d7a6c;
+  font-size: 13px;
+}
+
+.dialogue-evidence {
+  margin-bottom: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(232, 228, 216, 0.12);
+}
+
+#dialogue-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#dialogue-evidence-list:empty::after {
+  content: 'Nothing in your journal yet.';
+  color: #7d7a6c;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.evidence-button {
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  background: rgba(255, 214, 130, 0.08);
+  border: 1px solid rgba(255, 214, 130, 0.3);
+  color: #e8d9b8;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.evidence-button:hover {
+  background: rgba(255, 214, 130, 0.18);
+}
+
+.evidence-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#dialogue-input-form {
+  display: flex;
+  gap: 10px;
+}
+
+#dialogue-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  background: rgba(232, 228, 216, 0.06);
+  border: 1px solid rgba(232, 228, 216, 0.3);
+  color: #e8e4d8;
+  border-radius: 3px;
+}
+
+#dialogue-input:focus {
+  outline: none;
+  border-color: rgba(255, 214, 130, 0.5);
+}
+
+#dialogue-send-button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 9px 18px;
+  background: rgba(232, 228, 216, 0.08);
+  border: 1px solid rgba(232, 228, 216, 0.4);
+  color: #e8e4d8;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#dialogue-send-button:hover {
+  background: rgba(232, 228, 216, 0.18);
+}
+
+#dialogue-send-button:disabled,
+#dialogue-input:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dialogue-panel .hint {
+  margin-top: 14px;
+  text-align: center;
+}

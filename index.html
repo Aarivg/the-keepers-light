@@ -74,7 +74,37 @@
           <h2>You leave the light behind.</h2>
           <p id="ending-body"></p>
           <div id="ending-tally" class="theory-tally"></div>
+          <div id="ending-npc-summaries"></div>
           <button id="ending-continue-button">Keep exploring</button>
+        </div>
+      </div>
+
+      <div id="dialogue-menu" class="hidden">
+        <div class="dialogue-panel">
+          <div class="dialogue-header">
+            <h2 id="dialogue-npc-name">&nbsp;</h2>
+          </div>
+
+          <div id="dialogue-log"></div>
+          <p id="dialogue-typing" class="hidden">...</p>
+
+          <div class="dialogue-evidence">
+            <span class="theory-label">Present evidence:</span>
+            <div id="dialogue-evidence-list"></div>
+          </div>
+
+          <form id="dialogue-input-form">
+            <input
+              id="dialogue-input"
+              type="text"
+              placeholder="Say something..."
+              autocomplete="off"
+              maxlength="300"
+            />
+            <button type="submit" id="dialogue-send-button">Send</button>
+          </form>
+
+          <p class="hint">Press Esc to end the conversation</p>
         </div>
       </div>
     </div>
