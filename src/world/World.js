@@ -4,6 +4,7 @@ import { buildProps } from './Props.js';
 import { buildLighthouse } from './buildings/Lighthouse.js';
 import { buildCottage } from './buildings/Cottage.js';
 import { buildBoathouse } from './buildings/Boathouse.js';
+import { buildEndingTrigger } from './EndingTrigger.js';
 import { WORLD_BOUND_RADIUS } from './layout.js';
 
 const SKY_ZENITH = new THREE.Color('#232a3d');
@@ -88,14 +89,20 @@ export class World {
     this.scene.add(fill);
   }
 
-  /** Builds the three structures and registers their placeholder interactables. */
-  attachInteraction(interactionSystem, uiManager) {
-    const lighthouse = buildLighthouse(this.scene, interactionSystem, uiManager);
-    const cottage = buildCottage(this.scene, interactionSystem, uiManager);
-    const boathouse = buildBoathouse(this.scene, interactionSystem, uiManager);
+  /**
+   * Builds the three structures, their clues, ambient props, and the dock's
+   * ending trigger. `journal` and `audio` are threaded through to the
+   * buildings so clue objects can log to the journal and (for the radio)
+   * play a sound; `onEnding` fires once the player leaves with all clues found.
+   */
+  attachInteraction(interactionSystem, uiManager, journal, audio, onEnding) {
+    const lighthouse = buildLighthouse(this.scene, interactionSystem, uiManager, journal, audio);
+    const cottage = buildCottage(this.scene, interactionSystem, uiManager, journal);
+    const boathouse = buildBoathouse(this.scene, interactionSystem, uiManager, journal);
     const props = buildProps(this.scene, this._terrain);
+    const ending = buildEndingTrigger(this.scene, interactionSystem, uiManager, journal, onEnding);
 
-    for (const part of [lighthouse, cottage, boathouse]) {
+    for (const part of [lighthouse, cottage, boathouse, ending]) {
       this._colliders.push(...part.colliders);
       this._groundMeshes.push(...part.groundMeshes);
       this._updatables.push(part);
