@@ -69,6 +69,54 @@ export class AudioManager {
     source.stop(t + 0.12);
   }
 
+  /** A few seconds of filtered, crackling noise standing in for the radio's last recording. */
+  playRadioStatic(durationSec = 3.2) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = this._noiseBuffer;
+    source.loop = true;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1400;
+    filter.Q.value = 0.5;
+
+    // Fast, irregular gain flutter reads as radio crackle rather than a
+    // clean tone — two LFOs at unrelated rates beat against each other.
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.22, t + 0.15);
+    gain.gain.setValueAtTime(0.22, t + durationSec - 0.3);
+    gain.gain.linearRampToValueAtTime(0.0001, t + durationSec);
+
+    const crackleA = this.ctx.createOscillator();
+    crackleA.frequency.value = 11;
+    const crackleAGain = this.ctx.createGain();
+    crackleAGain.gain.value = 0.08;
+    const crackleB = this.ctx.createOscillator();
+    crackleB.frequency.value = 17;
+    const crackleBGain = this.ctx.createGain();
+    crackleBGain.gain.value = 0.06;
+
+    crackleA.connect(crackleAGain);
+    crackleB.connect(crackleBGain);
+    crackleAGain.connect(gain.gain);
+    crackleBGain.connect(gain.gain);
+    crackleA.start(t);
+    crackleB.start(t);
+    crackleA.stop(t + durationSec);
+    crackleB.stop(t + durationSec);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.master);
+
+    source.start(t);
+    source.stop(t + durationSec);
+  }
+
   _startWind() {
     // Low, unsettling wind drone: filtered looping noise with a slow LFO on
     // the filter cutoff so it breathes rather than sitting static.
