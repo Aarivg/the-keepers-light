@@ -63,10 +63,16 @@ export class InputManager {
   }
 
   _onKeyDown(e) {
+    // Tab would otherwise cycle focus off the canvas (and, per spec, drop
+    // pointer lock along with it) — stop that so it can double as a
+    // journal-toggle key like the brief asks for.
+    if (e.code === 'Tab') e.preventDefault();
+
     if (!this.keys.has(e.code)) {
       this.keys.add(e.code);
       if (e.code === 'KeyE') this._emit('interact');
       if (e.code === 'Escape') this._emit('escape');
+      if (e.code === 'KeyJ' || e.code === 'Tab') this._emit('journal');
     } else {
       this.keys.add(e.code);
     }
