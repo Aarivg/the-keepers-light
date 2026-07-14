@@ -31,7 +31,9 @@ export class InteractionSystem {
    * @param {THREE.Object3D} object - mesh (or group) to raycast against; all
    *   descendants are included automatically.
    * @param {Object} opts
-   * @param {string} opts.label - prompt text, e.g. "Examine logbook"
+   * @param {string|() => string} opts.label - prompt text, e.g. "Examine logbook".
+   *   May be a function returning a string if the prompt should reflect
+   *   changing state (a locked chest, a gated ending trigger, etc.).
    * @param {(entry) => void} opts.onInteract - called on interact key press
    * @param {number} [opts.range] - override maxRange for this object
    * @param {string} [opts.promptKey] - override the displayed key (default "E")
@@ -69,7 +71,9 @@ export class InteractionSystem {
     }
 
     if (this._current) {
-      this.uiManager.showPrompt(this._current.label, this._current.promptKey);
+      const label =
+        typeof this._current.label === 'function' ? this._current.label() : this._current.label;
+      this.uiManager.showPrompt(label, this._current.promptKey);
       this.uiManager.setCrosshairActive(true);
     } else {
       this.uiManager.hidePrompt();
