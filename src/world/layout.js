@@ -46,6 +46,11 @@ export const DOCK = {
   surfaceYSea: 0.35,
 };
 
+// NPCs (Phase 3). Positions are hand-placed just outside each building's
+// door, on the path approach — y is sampled from the terrain at runtime.
+export const MARA_POSITION = { x: BOATHOUSE.x - 0.5, z: BOATHOUSE.z + BOATHOUSE.depth / 2 + 4 };
+export const THOMAS_POSITION = { x: COTTAGE.x - 3.3, z: COTTAGE.z + COTTAGE.depth / 2 + 3 };
+
 export const SPAWN = {
   x: 34,
   z: 76, // near the sea end of the dock, having just arrived by boat
