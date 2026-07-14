@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { mulberry32, flatMaterial, boxCollider } from './utils.js';
+import { loadTexture } from './TextureLibrary.js';
 import { LIGHTHOUSE, COTTAGE, BOATHOUSE, PATH_WIDTH } from './layout.js';
 
-const ROCK_MAT = flatMaterial({ color: '#6b6a63', roughness: 0.95 });
-const ROCK_MAT_DARK = flatMaterial({ color: '#565650', roughness: 0.97 });
+const ROCK_TEXTURE = loadTexture('/generated/textures/rock.png');
+const ROCK_MAT = flatMaterial({ color: '#6b6a63', map: ROCK_TEXTURE, roughness: 0.95 });
+const ROCK_MAT_DARK = flatMaterial({ color: '#565650', map: ROCK_TEXTURE, roughness: 0.97 });
 const FENCE_MAT = flatMaterial({ color: '#5a4a38', roughness: 0.85 });
 const GULL_MAT = flatMaterial({ color: '#e8e4d8', roughness: 0.7 });
 

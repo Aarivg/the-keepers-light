@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadTexture } from './TextureLibrary.js';
 import { buildTerrain } from './Terrain.js';
 import { buildProps } from './Props.js';
 import { buildLighthouse } from './buildings/Lighthouse.js';
@@ -12,36 +13,19 @@ const SKY_ZENITH = new THREE.Color('#232a3d');
 const SKY_HORIZON = new THREE.Color('#d98a52');
 const FOG_COLOR = new THREE.Color('#5b5266');
 
+// Phase 4: the generated dusk skybox (see GENERATED_ASSETS.md) replaces the
+// flat two-color gradient this dome used to render — same dome mesh, same
+// BackSide/no-depth-write setup, just a photo-real-painted sky instead of a
+// shader gradient. The 21:9 source image wraps once around the sphere's
+// longitude (matching how it was prompted: "seamless left-to-right").
 function buildSkyDome() {
   const geo = new THREE.SphereGeometry(400, 24, 16);
-  const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      topColor: { value: SKY_ZENITH },
-      bottomColor: { value: SKY_HORIZON },
-      offset: { value: 18 },
-      exponent: { value: 0.9 },
-    },
-    vertexShader: `
-      varying vec3 vWorldPosition;
-      void main() {
-        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = worldPosition.xyz;
-        gl_Position = projectionMatrix * viewMatrix * worldPosition;
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 topColor;
-      uniform vec3 bottomColor;
-      uniform float offset;
-      uniform float exponent;
-      varying vec3 vWorldPosition;
-      void main() {
-        float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
-        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-      }
-    `,
+  const texture = loadTexture('/generated/skybox.png');
+  const mat = new THREE.MeshBasicMaterial({
+    map: texture,
     side: THREE.BackSide,
     depthWrite: false,
+    fog: false,
   });
   return new THREE.Mesh(geo, mat);
 }
@@ -105,6 +89,7 @@ export class World {
     const props = buildProps(this.scene, this._terrain);
     const ending = buildEndingTrigger(this.scene, interactionSystem, uiManager, journal, dialogue, onEnding);
     const npcs = buildNPCs(this.scene, interactionSystem, uiManager, this._terrain, onTalk);
+    this.npcPortraits = npcs.portraits;
 
     for (const part of [lighthouse, cottage, boathouse, ending, npcs]) {
       this._colliders.push(...part.colliders);
@@ -115,8 +100,9 @@ export class World {
     this._updatables.push(props);
   }
 
-  update(dt, elapsed) {
-    for (const u of this._updatables) u.update?.(dt, elapsed);
+  /** `activeNpcId` is set while the player is mid-conversation with an NPC, so NPCs.js can play a talking animation for that one. */
+  update(dt, elapsed, activeNpcId = null) {
+    for (const u of this._updatables) u.update?.(dt, elapsed, activeNpcId);
   }
 
   getGroundMeshes() {

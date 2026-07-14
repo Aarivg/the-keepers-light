@@ -1,12 +1,14 @@
-# The Keeper's Light — Phase 3: NPCs & Live Dialogue
+# The Keeper's Light — Phase 4: NPC Character Art
 
 A first-person mystery game. Phase 1 built the engine and island; Phase 2
-added the mystery's nine clues and the journal/theory-board system; this
-phase adds two AI-driven NPCs — Mara Kessel and Thomas Voss — whose dialogue
-is generated live by Claude Fable 5, aware of exactly which clues you've
-found, and built to never resolve the mystery's ambiguity no matter how hard
-you push. That's still deliberate: Phase 2's "never confirm a reading"
-discipline now applies to two characters who can talk back.
+added the mystery's nine clues and the journal/theory-board system; Phase 3
+added two AI-driven NPCs — Mara Kessel and Thomas Voss — whose dialogue is
+generated live by Claude Fable 5, aware of exactly which clues you've found,
+and built to never resolve the mystery's ambiguity no matter how hard you
+push; this phase replaces their low-poly box-person placeholders with two
+distinct, hand-built characters (still flat-shaded primitives, matching the
+rest of the island's look) that breathe, sway, and get visibly more
+animated while they're talking to you.
 
 Built with **Three.js** (vanilla, no framework) + **Vite** on the frontend,
 and a small **Node/Express** backend that holds the Anthropic API key and
@@ -175,9 +177,15 @@ src/
                                network failure so a dead server never breaks the game
   world/
     NPCs.js                     builds and places Mara and Thomas, registers their
-                               interaction (talking replaces examine — see below)
-    npcs/NPCPlaceholder.js       shared low-poly "voxel person" builder (placeholder
-                               art — Phase 4 territory to replace with real models)
+                               interaction (talking replaces examine — see below), and
+                               drives their per-frame idle/talking animation
+    npcs/CharacterKit.js         shared rig primitives (leg, shoulder-pivoted arm,
+                               neck-pivoted head) and animateIdle(), the breathing/sway/
+                               talking-cadence driver both characters use
+    npcs/Mara.js                  buildMara() — stocky build, oilskin coat, sou'wester
+                               hat, coil of dock rope at her hip
+    npcs/Thomas.js                 buildThomas() — leaner build, long dark travel coat,
+                               scarf, a grief-worn forward stoop
   ui/
     UIManager.js  ui.css        + the dialogue panel (chat log, free-text input,
                                present-evidence buttons) and the ending overlay's
@@ -191,6 +199,28 @@ Everything from Phase 2 (`src/journal/`, `src/interaction/`,
 plug into the existing `InteractionSystem` (raycast + prompt) exactly like
 a clue object does, just with `onInteract` opening the dialogue UI instead
 of logging a clue.
+
+## What's here (Phase 4 additions)
+
+- **Two distinct character models**, `npcs/Mara.js` and `npcs/Thomas.js`,
+  replacing the identical box-person placeholder — Mara reads as a stocky
+  boat captain (broad oilskin coat, sou'wester hat, a coil of dock rope at
+  her hip), Thomas as leaner and more formal (a long dark travel coat, a
+  scarf, hair, shoulders drawn slightly forward). Both are still built
+  entirely from flat-shaded Three.js primitives, same as every building and
+  prop on the island — no imported models or textures.
+- **A shared rig kit** (`npcs/CharacterKit.js`): a shoulder-pivoted arm
+  (upper arm + forearm + hand), a neck-pivoted head (with eyes), and a leg
+  (thigh + boot) that both characters compose differently. Pivots sit at the
+  joint, not the part's center, so rotating them reads as a natural swing
+  rather than the part sliding through itself.
+- **Idle animation** — a slow breathing bob and a gentle sway play
+  continuously via `animateIdle()`, driven off `elapsed` time with a
+  per-character random phase offset so Mara and Thomas are never in sync.
+- **A talking animation** — `World.update()` now threads an `activeNpcId`
+  down to every updatable; `NPCs.js` passes it to `animateIdle()`, which
+  swaps in a faster head-turn/nod and arm-gesture cadence for whichever NPC
+  the player is currently in dialogue with (see `Game._tick()`).
 
 ## What's here (Phase 3 additions)
 
@@ -226,10 +256,14 @@ of logging a clue.
    following the existing two as a template). Extend `buildSystemPrompt` if
    the new NPC needs its own conditional instructions (like Thomas's
    one-time unprompted deed mention).
-2. Build and place them in `src/world/NPCs.js` using
-   `buildHumanoidPlaceholder(coatColor)` from `world/npcs/NPCPlaceholder.js`,
-   add layout coordinates to `world/layout.js`, and register them with
-   `interactionSystem.register(mesh, { label: 'Talk to ...', onInteract: () => onTalk(id, displayName) })`.
+2. Build a character in a new `world/npcs/<Name>.js`, composing
+   `buildLeg`/`buildArmPivot`/`buildHeadPivot` from `world/npcs/CharacterKit.js`
+   (see `Mara.js`/`Thomas.js` for the pattern) and set `group.userData.rig`
+   + `group.userData.phase` so `animateIdle()` can drive it. Place it in
+   `src/world/NPCs.js`, add layout coordinates to `world/layout.js`, register
+   it with `interactionSystem.register(mesh, { label: 'Talk to ...', onInteract: () => onTalk(id, displayName) })`,
+   and call its `.userData.animate(elapsed, { talking })` from `NPCs.js`'s
+   `update()`.
 3. If the new NPC should also gate the ending, extend the `isReady()` check
    in `world/EndingTrigger.js`.
 4. Preserve the ambiguity discipline — read "The mystery, and how to read
@@ -243,6 +277,36 @@ Note that `server/npcs.js` imports `CLUE_LIST` from the same
 boundary) so clue text is defined exactly once and can never drift between
 what the player reads in the journal and what an NPC is told about it.
 
+## Generated environment art
+
+Ground, rock, wood, and metal textures, plus the sky dome, are real images
+generated live via the Higgsfield MCP server (`generate_image`, model
+`nano_banana_pro`, one consistent style prefix reused across every prompt —
+see `src/world/TextureLibrary.js` for the loader and `GENERATED_ASSETS.md`
+for the full prompt/job-id log). They're committed under `public/generated/`
+so the game doesn't need Higgsfield access to run.
+
+**Built procedurally instead**: the two Phase 2 photograph props (dock photo
+of Elias and Rina, and the newer solo photo) and the NPC dialogue portraits
+for Mara and Thomas were never generated via Higgsfield — the workspace ran
+out of credits mid-batch (`balance` → 0 credits, free plan; re-checked live,
+no free-tier reset exists) and the user declined to purchase more or use the
+card-required trial. Rather than leave these unfinished or fake them with
+placeholder art, they're built procedurally:
+
+- **The two photographs** are Canvas2D-drawn "illustrated photographs" —
+  flat-shaded low-poly figures on a dusk-sky/dock background, aged with a
+  sepia tint, vignette, and grain — see `src/journal/PhotoArt.js`, wired
+  into `Cottage.js`'s existing `photoFrame` prop as two textured planes.
+- **The two portraits** are bust-framed snapshots of the *actual* in-world
+  3D models (not separate art), rendered once via an offscreen
+  `WebGLRenderer` with the same key/fill light colors as the main scene —
+  see `src/world/npcs/PortraitRenderer.js`, wired into the dialogue panel's
+  new `#dialogue-npc-portrait` image.
+
+Full detail — which asset is AI-generated vs. procedural, and why — is in
+`GENERATED_ASSETS.md`.
+
 ## Known limitations (intentional, for this phase)
 
 - No jumping — this is a walking sim, not a platformer.
@@ -250,7 +314,10 @@ what the player reads in the journal and what an NPC is told about it.
   closing the tab resets everything. Full save/load is a later pass.
 - No database on the backend — session state lives entirely in the
   frontend's journal/dialogue managers, resent with every request.
-- NPCs are low-poly placeholder "voxel people," not final character art.
+- NPCs are hand-built from flat-shaded primitives, matching the island's
+  low-poly style throughout — not photorealistic or rigged/skinned character
+  art, and there's no walk cycle (idle/talking animation only; NPCs don't
+  currently move from their spot).
 - Not tested against gamepad/touch input — keyboard + mouse only.
 - I could not verify live Claude Fable 5 dialogue output myself in this
   environment (no Anthropic API key configured here) — the request/response

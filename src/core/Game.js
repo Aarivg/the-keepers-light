@@ -153,7 +153,7 @@ export class Game {
     this.uiManager.renderEvidenceButtons(this.journal.entries, (clueId) =>
       this._sendDialogueAction({ type: 'presentEvidence', clueId })
     );
-    this.uiManager.showDialogue(displayName);
+    this.uiManager.showDialogue(displayName, this.world.npcPortraits?.[npcId]);
     this.input.exitPointerLock();
   }
 
@@ -226,7 +226,7 @@ export class Game {
       this.camera.updateMatrixWorld();
       this.interaction.update();
     }
-    this.world.update(dt, elapsed);
+    this.world.update(dt, elapsed, this._uiMode === 'dialogue' ? this._currentNpcId : null);
 
     this.renderer.render(this.scene, this.camera);
   }

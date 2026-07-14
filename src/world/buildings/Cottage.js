@@ -1,16 +1,24 @@
 import * as THREE from 'three';
 import { flatMaterial, boxCollider } from '../utils.js';
+import { loadTexture } from '../TextureLibrary.js';
 import { COTTAGE } from '../layout.js';
 import { CLUES } from '../../journal/clues.js';
 import { registerClue } from '../../journal/registerClue.js';
+import { renderDockPhoto, renderSoloPhoto } from '../../journal/PhotoArt.js';
 
+const DOCK_PHOTO_TEXTURE = new THREE.CanvasTexture(renderDockPhoto());
+DOCK_PHOTO_TEXTURE.colorSpace = THREE.SRGBColorSpace;
+const SOLO_PHOTO_TEXTURE = new THREE.CanvasTexture(renderSoloPhoto());
+SOLO_PHOTO_TEXTURE.colorSpace = THREE.SRGBColorSpace;
+
+const WOOD_TEXTURE = loadTexture('/generated/textures/wood.png');
 const WALL = flatMaterial({ color: '#c9bd9e', roughness: 0.9 });
-const WOOD_DARK = flatMaterial({ color: '#3f2f22', roughness: 0.85 });
-const WOOD = flatMaterial({ color: '#5c4630', roughness: 0.8 });
+const WOOD_DARK = flatMaterial({ color: '#3f2f22', map: WOOD_TEXTURE, roughness: 0.85 });
+const WOOD = flatMaterial({ color: '#5c4630', map: WOOD_TEXTURE, roughness: 0.8 });
 const ROOF = flatMaterial({ color: '#3a2a28', roughness: 0.95 });
 const FABRIC = flatMaterial({ color: '#5e4550', roughness: 0.9 });
 const FRAME = flatMaterial({ color: '#2b241d', roughness: 0.6 });
-const BRASS = flatMaterial({ color: '#8a7638', roughness: 0.4, metalness: 0.7 });
+const BRASS = flatMaterial({ color: '#8a7638', map: loadTexture('/generated/textures/metal.png'), roughness: 0.4, metalness: 0.7 });
 
 const WALL_H = 2.9;
 const WALL_T = 0.3;
@@ -161,6 +169,25 @@ export function buildCottage(scene, interactionSystem, uiManager, journal) {
   photoFrame.rotation.x = -0.35;
   photoFrame.castShadow = true;
   group.add(photoFrame);
+
+  const dockPhoto = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.25, 0.17),
+    flatMaterial({ map: DOCK_PHOTO_TEXTURE, roughness: 0.8 })
+  );
+  dockPhoto.position.set(0, 0, 0.017);
+  photoFrame.add(dockPhoto);
+
+  // "Tucked into the frame, a second photograph" (clues.js CLUES.PHOTOGRAPH)
+  // — the frame box is only 30x22cm, too small for a subtle peek to read at
+  // gameplay distance, so this one pokes visibly past the frame's right
+  // edge, tucked-behind-and-sticking-out the way a second print behind a
+  // frame actually looks, rather than confined to the box footprint.
+  const soloPhoto = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.16, 0.11),
+    flatMaterial({ map: SOLO_PHOTO_TEXTURE, roughness: 0.8 })
+  );
+  soloPhoto.position.set(0.09, -0.01, 0.014);
+  photoFrame.add(soloPhoto);
   const hiddenKey = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.14, 0.03), BRASS);
   hiddenKey.position.set(ox + halfW - 0.42, floorY + 0.56, oz + halfD - 1.88);
   hiddenKey.visible = false; // revealed conceptually once the photo's been examined

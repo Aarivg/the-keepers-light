@@ -1,16 +1,18 @@
 import * as THREE from 'three';
 import { flatMaterial, boxCollider } from '../utils.js';
+import { loadTexture } from '../TextureLibrary.js';
 import { BOATHOUSE } from '../layout.js';
 import { registerExamine } from '../../interaction/registerExamine.js';
 import { CLUES } from '../../journal/clues.js';
 import { registerClue } from '../../journal/registerClue.js';
 
+const WOOD_TEXTURE = loadTexture('/generated/textures/wood.png');
 const WALL = flatMaterial({ color: '#8a7a5c', roughness: 0.9 });
-const WOOD_DARK = flatMaterial({ color: '#3f2f22', roughness: 0.85 });
-const WOOD = flatMaterial({ color: '#5c4630', roughness: 0.8 });
+const WOOD_DARK = flatMaterial({ color: '#3f2f22', map: WOOD_TEXTURE, roughness: 0.85 });
+const WOOD = flatMaterial({ color: '#5c4630', map: WOOD_TEXTURE, roughness: 0.8 });
 const ROOF = flatMaterial({ color: '#2f2a26', roughness: 0.95 });
 const HULL = flatMaterial({ color: '#4a5a52', roughness: 0.7 });
-const METAL = flatMaterial({ color: '#7a7a78', roughness: 0.5, metalness: 0.5 });
+const METAL = flatMaterial({ color: '#7a7a78', map: loadTexture('/generated/textures/metal.png'), roughness: 0.5, metalness: 0.5 });
 
 const WALL_H = 2.6;
 const WALL_T = 0.28;

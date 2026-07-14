@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ValueNoise2D, smoothstep, lerp, flatMaterial } from './utils.js';
+import { loadTexture } from './TextureLibrary.js';
 import {
   ISLAND_RADIUS,
   WATER_LEVEL,
@@ -151,7 +152,12 @@ export function buildTerrain(scene) {
 
   const positions = [];
   const colors = [];
+  const uvs = [];
   const indices = [];
+
+  // World-planar UVs (one tile every 16 units) so the generated ground
+  // texture can be applied as a `map` alongside the existing vertex colors.
+  const TEXTURE_TILE_SIZE = 16;
 
   for (let iz = 0; iz <= segments; iz++) {
     for (let ix = 0; ix <= segments; ix++) {
@@ -161,6 +167,7 @@ export function buildTerrain(scene) {
       positions.push(x, y, z);
       const c = colorAt(x, z, y);
       colors.push(c.r, c.g, c.b);
+      uvs.push(x / TEXTURE_TILE_SIZE, z / TEXTURE_TILE_SIZE);
     }
   }
 
@@ -177,10 +184,16 @@ export function buildTerrain(scene) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
-  const material = flatMaterial({ vertexColors: true, roughness: 0.95, metalness: 0.02 });
+  const material = flatMaterial({
+    vertexColors: true,
+    map: loadTexture('/generated/textures/ground.png'),
+    roughness: 0.95,
+    metalness: 0.02,
+  });
   const terrainMesh = new THREE.Mesh(geometry, material);
   terrainMesh.receiveShadow = true;
   terrainMesh.userData.isTerrain = true;
@@ -204,7 +217,11 @@ export function buildTerrain(scene) {
   // with a handful of piling posts for silhouette.
   const dockGroup = new THREE.Group();
   const dockSurfaces = [];
-  const dockMat = flatMaterial({ color: '#4a3a28', roughness: 0.9 });
+  const dockMat = flatMaterial({
+    color: '#4a3a28',
+    map: loadTexture('/generated/textures/wood.png'),
+    roughness: 0.9,
+  });
   const dockLength = DOCK.seaZ - DOCK.landZ;
   const plankCount = 16;
   const plankLength = dockLength / plankCount;

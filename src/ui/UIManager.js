@@ -31,6 +31,7 @@ export class UIManager {
 
     this.dialogueMenuEl = document.getElementById('dialogue-menu');
     this.dialogueNpcNameEl = document.getElementById('dialogue-npc-name');
+    this.dialoguePortraitEl = document.getElementById('dialogue-npc-portrait');
     this.dialogueLogEl = document.getElementById('dialogue-log');
     this.dialogueTypingEl = document.getElementById('dialogue-typing');
     this.dialogueEvidenceListEl = document.getElementById('dialogue-evidence-list');
@@ -274,8 +275,10 @@ export class UIManager {
 
   // ---------------- Dialogue (NPC conversation) ----------------
 
-  showDialogue(npcName) {
+  /** @param {string} [portraitSrc] - data: URL from World.npcPortraits; omitted hides the portrait image */
+  showDialogue(npcName, portraitSrc) {
     this.dialogueNpcNameEl.textContent = npcName;
+    this.dialoguePortraitEl.src = portraitSrc || '';
     this.dialogueInputEl.value = '';
     this.dialogueMenuEl.classList.remove('hidden');
     this.dialogueInputEl.focus();

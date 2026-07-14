@@ -529,11 +529,33 @@ html, body {
   flex-direction: column;
 }
 
+.dialogue-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
 .dialogue-header h2 {
-  margin: 0 0 14px;
+  margin: 0;
   letter-spacing: 0.04em;
   color: #f1ead8;
   font-size: 19px;
+}
+
+#dialogue-npc-portrait {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #1a1c22;
+  border: 1px solid rgba(232, 228, 216, 0.25);
+  flex-shrink: 0;
+}
+
+#dialogue-npc-portrait:not([src]),
+#dialogue-npc-portrait[src=''] {
+  visibility: hidden;
 }
 
 #dialogue-log {
