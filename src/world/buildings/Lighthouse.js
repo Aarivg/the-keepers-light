@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { flatMaterial, placeOnRadius, boxCollider, colliderFromObject } from '../utils.js';
 import { LIGHTHOUSE } from '../layout.js';
-import { registerExamine } from '../../interaction/registerExamine.js';
+import { CLUES } from '../../journal/clues.js';
+import { registerClue } from '../../journal/registerClue.js';
 
 const STONE = flatMaterial({ color: '#7a746a', roughness: 0.92 });
 const STONE_DARK = flatMaterial({ color: '#5c574f', roughness: 0.95 });
@@ -14,6 +15,8 @@ const GLASS = flatMaterial({
   opacity: 0.35,
 });
 const METAL = flatMaterial({ color: '#8a8f92', roughness: 0.4, metalness: 0.7 });
+const BRASS = flatMaterial({ color: '#8a7638', roughness: 0.4, metalness: 0.75 });
+const SHARD = flatMaterial({ color: '#dfeef0', roughness: 0.1, transparent: true, opacity: 0.55 });
 const LAMP_GLOW = new THREE.Color('#ffdca0');
 
 const SEGMENTS = 16;
@@ -37,7 +40,7 @@ function buildRing({ cx, cz, baseY, height, radius, thickness, doorAngle, materi
   return group;
 }
 
-export function buildLighthouse(scene, interactionSystem, uiManager) {
+export function buildLighthouse(scene, interactionSystem, uiManager, journal, audio) {
   const { x: cx, z: cz, floorY, towerRadius, wallThickness, doorAngle } = LIGHTHOUSE;
   const innerRadius = towerRadius - wallThickness;
 
@@ -118,7 +121,7 @@ export function buildLighthouse(scene, interactionSystem, uiManager) {
   group.add(landing);
   groundMeshes.push(landing);
 
-  // Ground-floor furnishings near the entrance.
+  // ---------------- Ground-floor keeper's station ----------------
   const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.8), WOOD);
   deskTop.position.set(cx + 1.6, floorY + 0.75, cz + 1.2);
   const deskLeg = (dx, dz) => {
@@ -132,28 +135,21 @@ export function buildLighthouse(scene, interactionSystem, uiManager) {
   group.add(desk);
   colliders.push(colliderFromObjectSafe(deskTop));
 
-  const logbook = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.05, 0.24), flatMaterial({ color: '#3a2f22' }));
-  logbook.position.set(cx + 1.9, floorY + 0.82, cz + 1.1);
-  logbook.rotation.y = 0.3;
-  logbook.castShadow = true;
-  group.add(logbook);
-  registerExamine(
-    interactionSystem, uiManager, logbook,
-    'Examine keeper\'s logbook',
-    'The logbook\'s last entry trails off mid-sentence. [Placeholder — Phase 2 clue content]'
-  );
+  const radio = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, 0.3), METAL);
+  radio.position.set(cx + 1.85, floorY + 0.93, cz + 1.05);
+  radio.castShadow = true;
+  group.add(radio);
+  registerClue(interactionSystem, uiManager, journal, radio, CLUES.RADIO, {
+    onEveryInteract: () => audio?.playRadioStatic?.(),
+  });
 
   const chart = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.4), flatMaterial({ color: '#cfc2a0' }));
   chart.position.set(cx + 1.3, floorY + 0.81, cz + 1.35);
   chart.rotation.y = -0.2;
   group.add(chart);
-  registerExamine(
-    interactionSystem, uiManager, chart,
-    'Examine tide chart',
-    'A hand-marked chart of the shoals north of the island. [Placeholder — Phase 2 clue content]'
-  );
+  registerClue(interactionSystem, uiManager, journal, chart, CLUES.TIDE_CHART);
 
-  // The lamp mechanism at the top — broken, per the brief.
+  // ---------------- Lamp room ----------------
   const lampHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.0, 1.4, 12), METAL);
   lampHousing.position.set(cx, lampFloorY + 0.9, cz);
   lampHousing.castShadow = true;
@@ -164,11 +160,34 @@ export function buildLighthouse(scene, interactionSystem, uiManager) {
   lampLens.scale.y = 0.6;
   group.add(lampLens);
   colliders.push(colliderFromObjectSafe(lampHousing));
-  registerExamine(
-    interactionSystem, uiManager, lampHousing,
-    'Examine the lamp mechanism',
-    'The rotation gears are jammed. Someone forced it to stop. [Placeholder — Phase 2 clue content]'
-  );
+  registerClue(interactionSystem, uiManager, journal, lampHousing, CLUES.BROKEN_LAMP);
+
+  // Shattered glass, scattered outward from the housing — the physical
+  // detail the clue text describes.
+  const shardGroup = new THREE.Group();
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = 0.9 + Math.random() * 0.7;
+    const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.08 + Math.random() * 0.06), SHARD);
+    shard.position.set(
+      cx + Math.cos(angle) * dist,
+      lampFloorY + 0.02,
+      cz + Math.sin(angle) * dist
+    );
+    shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    shardGroup.add(shard);
+  }
+  group.add(shardGroup);
+
+  // Brass bell — old maritime superstition, hung near the lamp.
+  const bellBracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.06), STONE_DARK);
+  bellBracket.position.set(cx - 1.6, lampFloorY + 1.9, cz + 1.0);
+  group.add(bellBracket);
+  const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 0.34, 12, 1, true), BRASS);
+  bell.position.set(cx - 1.6, lampFloorY + 1.55, cz + 1.0);
+  bell.castShadow = true;
+  group.add(bell);
+  registerClue(interactionSystem, uiManager, journal, bell, CLUES.BELL);
 
   // The beacon still turns even though the keeper is gone — a slow-rotating
   // spotlight plus a faint additive cone standing in for the light beam.
