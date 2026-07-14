@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { flatMaterial, placeOnRadius, boxCollider, colliderFromObject } from '../utils.js';
+import { loadTexture } from '../TextureLibrary.js';
 import { LIGHTHOUSE } from '../layout.js';
 import { CLUES } from '../../journal/clues.js';
 import { registerClue } from '../../journal/registerClue.js';
 
 const STONE = flatMaterial({ color: '#7a746a', roughness: 0.92 });
 const STONE_DARK = flatMaterial({ color: '#5c574f', roughness: 0.95 });
-const WOOD = flatMaterial({ color: '#4a3a28', roughness: 0.85 });
+const WOOD = flatMaterial({ color: '#4a3a28', map: loadTexture('/generated/textures/wood.png'), roughness: 0.85 });
 const GLASS = flatMaterial({
   color: '#bcd8de',
   roughness: 0.15,
@@ -14,8 +15,9 @@ const GLASS = flatMaterial({
   transparent: true,
   opacity: 0.35,
 });
-const METAL = flatMaterial({ color: '#8a8f92', roughness: 0.4, metalness: 0.7 });
-const BRASS = flatMaterial({ color: '#8a7638', roughness: 0.4, metalness: 0.75 });
+const METAL_TEXTURE = loadTexture('/generated/textures/metal.png');
+const METAL = flatMaterial({ color: '#8a8f92', map: METAL_TEXTURE, roughness: 0.4, metalness: 0.7 });
+const BRASS = flatMaterial({ color: '#8a7638', map: METAL_TEXTURE, roughness: 0.4, metalness: 0.75 });
 const SHARD = flatMaterial({ color: '#dfeef0', roughness: 0.1, transparent: true, opacity: 0.55 });
 const LAMP_GLOW = new THREE.Color('#ffdca0');
 

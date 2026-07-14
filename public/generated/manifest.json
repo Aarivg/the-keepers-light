@@ -1,0 +1,108 @@
+{
+  "stylePrefix": "Moody painterly matte-illustration game art, flat-shaded low-poly aesthetic with soft directional lighting, warm dusk-orange and overcast slate-blue palette, isolated foggy coastal lighthouse-island mood, muted weathered color grading, subtle grain, no text, no watermark, no logo —",
+  "requestedModel": "nano_banana_pro",
+  "actualModel": "nano_banana_2",
+  "modelNote": "generate_image was called with model='nano_banana_pro' for every asset; the Higgsfield API silently routed all nine jobs to 'nano_banana_2' instead (visible in each job's params.model in the raw job_status response). Not something this integration chose — flagged here since it's a live-behavior detail worth knowing about, not a hidden substitution.",
+  "generatedAt": "2026-07-14T13:40:00Z",
+  "assets": [
+    {
+      "name": "textures/ground",
+      "status": "completed",
+      "jobId": "a5031937-76a2-48d3-86dc-e805a348faa5",
+      "prompt": "a seamless tileable top-down texture of coastal dirt-and-gravel path ground, patchy dry grass and packed earth, small pebbles, flat even lighting with no shadows or highlights, no horizon, no objects, no characters",
+      "aspectRatio": "1:1",
+      "resolution": "2k",
+      "outputPath": "public/generated/textures/ground.png",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GUlCzeeZdtFiYf7MxsPSLRnIPr/hf_20260714_134013_a5031937-76a2-48d3-86dc-e805a348faa5.png"
+    },
+    {
+      "name": "textures/rock",
+      "status": "completed",
+      "jobId": "fcb71e0d-87b0-43a9-b06f-c109a74864c2",
+      "prompt": "a seamless tileable top-down texture of weathered grey coastal rock and boulder surface, cracked stone with lichen patches, flat even lighting with no shadows or highlights, no horizon, no objects, no characters",
+      "aspectRatio": "1:1",
+      "resolution": "2k",
+      "outputPath": "public/generated/textures/rock.png",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GUlCzeeZdtFiYf7MxsPSLRnIPr/hf_20260714_134059_fcb71e0d-87b0-43a9-b06f-c109a74864c2.png"
+    },
+    {
+      "name": "textures/wood",
+      "status": "completed",
+      "jobId": "88f9eff4-9251-457c-8966-34adfe6f0bd4",
+      "prompt": "a seamless tileable top-down texture of old weathered dark wood planks, salt-worn grain, faint cracks, flat even lighting with no shadows or highlights, no horizon, no objects, no characters",
+      "aspectRatio": "1:1",
+      "resolution": "2k",
+      "outputPath": "public/generated/textures/wood.png",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GUlCzeeZdtFiYf7MxsPSLRnIPr/hf_20260714_134100_88f9eff4-9251-457c-8966-34adfe6f0bd4.png"
+    },
+    {
+      "name": "textures/metal",
+      "status": "completed",
+      "jobId": "e7be6ee1-5aad-4a71-8e55-7f55bc748018",
+      "prompt": "a seamless tileable top-down texture of rusted worn metal plate, oxidized brass-and-iron surface with scratches and patina, flat even lighting with no shadows or highlights, no horizon, no objects, no characters",
+      "aspectRatio": "1:1",
+      "resolution": "2k",
+      "outputPath": "public/generated/textures/metal.png",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GUlCzeeZdtFiYf7MxsPSLRnIPr/hf_20260714_134101_e7be6ee1-5aad-4a71-8e55-7f55bc748018.png"
+    },
+    {
+      "name": "skybox",
+      "status": "completed",
+      "jobId": "22bfbc30-4f1d-4364-9767-be2e3f386c4e",
+      "prompt": "a wide panoramic dusk sky vista over a lonely sea horizon, layered overcast clouds glowing orange near the horizon fading to deep slate-blue overhead, no ground, no islands, no buildings, no birds, no characters, seamless left-to-right horizon band",
+      "aspectRatio": "21:9",
+      "resolution": "2k",
+      "outputPath": "public/generated/skybox.png",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GUlCzeeZdtFiYf7MxsPSLRnIPr/hf_20260714_134102_22bfbc30-4f1d-4364-9767-be2e3f386c4e.png"
+    },
+    {
+      "name": "props/photo-dock",
+      "status": "blocked_no_credits_built_procedurally",
+      "jobId": null,
+      "prompt": "an aged vintage photograph, slightly faded warm sepia tone, of a middle-aged lighthouse keeper man and a younger laughing woman with wind-blown hair, standing together on a wooden dock, pencil-written corner, candid snapshot composition",
+      "aspectRatio": "4:3",
+      "resolution": "2k",
+      "outputPath": null,
+      "error": "Error starting generation: Out of credits in the selected workspace.",
+      "proceduralSource": "src/journal/PhotoArt.js renderDockPhoto() — Canvas2D, generated at runtime, not a file on disk"
+    },
+    {
+      "name": "props/photo-solo",
+      "status": "blocked_no_credits_built_procedurally",
+      "jobId": null,
+      "prompt": "an aged vintage photograph, slightly less faded than an older photo, of the same middle-aged lighthouse keeper man now alone and older, standing on the same wooden dock in the same spot, self-timer snapshot, solemn expression, candid composition",
+      "aspectRatio": "3:4",
+      "resolution": "2k",
+      "outputPath": null,
+      "error": "Error starting generation: Out of credits in the selected workspace.",
+      "proceduralSource": "src/journal/PhotoArt.js renderSoloPhoto() — Canvas2D, generated at runtime, not a file on disk"
+    },
+    {
+      "name": "portraits/mara",
+      "status": "blocked_no_credits_built_procedurally",
+      "jobId": null,
+      "prompt": "a character portrait, waist-up, three-quarter view, of Mara Kessel, a stocky weathered middle-aged female supply-boat captain with a gruff guarded expression and sun-worn skin, wearing a navy oilskin coat and a yellow sou'wester hat, coastal dock backdrop",
+      "aspectRatio": "3:4",
+      "resolution": "2k",
+      "outputPath": null,
+      "error": "Error starting generation: Out of credits in the selected workspace.",
+      "proceduralSource": "src/world/npcs/PortraitRenderer.js renderPortrait(mara, {targetY:1.55, distance:2.6}) — offscreen Three.js snapshot of the real in-world model, rendered once in NPCs.js buildNPCs(), not a file on disk"
+    },
+    {
+      "name": "portraits/thomas",
+      "status": "blocked_no_credits_built_procedurally",
+      "jobId": null,
+      "prompt": "a character portrait, waist-up, three-quarter view, of Thomas Voss, a lean young man in his late twenties outwardly grieving with careful anxious eyes and combed dark hair, wearing a long dark travel coat and a muted maroon scarf, cottage backdrop",
+      "aspectRatio": "3:4",
+      "resolution": "2k",
+      "outputPath": null,
+      "error": "Error starting generation: Out of credits in the selected workspace.",
+      "proceduralSource": "src/world/npcs/PortraitRenderer.js renderPortrait(thomas, {targetY:1.5, distance:2.4}) — offscreen Three.js snapshot of the real in-world model, rendered once in NPCs.js buildNPCs(), not a file on disk"
+    }
+  ],
+  "balanceCheckedAfterBlock": { "credits": 0, "subscription_plan_type": "free" },
+  "freeTierRecheck": {
+    "checkedAt": "2026-07-14T13:55:00Z",
+    "result": "No free-tier credit reset or daily allotment exists on the free plan. Only $0 option is a 3-day MCP-only trial (100 credits) that requires a card on file and auto-charges $49/mo after 3 days unless cancelled — treated as purchase-adjacent, not used, per user instruction not to purchase."
+  }
+}
