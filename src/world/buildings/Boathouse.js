@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { flatMaterial, boxCollider } from '../utils.js';
 import { BOATHOUSE } from '../layout.js';
 import { registerExamine } from '../../interaction/registerExamine.js';
+import { CLUES } from '../../journal/clues.js';
+import { registerClue } from '../../journal/registerClue.js';
 
 const WALL = flatMaterial({ color: '#8a7a5c', roughness: 0.9 });
 const WOOD_DARK = flatMaterial({ color: '#3f2f22', roughness: 0.85 });
@@ -23,7 +25,7 @@ function addWall(group, colliders, cx, baseY, cz, sx, sy, sz, material = WALL) {
   return mesh;
 }
 
-export function buildBoathouse(scene, interactionSystem, uiManager) {
+export function buildBoathouse(scene, interactionSystem, uiManager, journal) {
   const { x: ox, z: oz, floorY } = BOATHOUSE;
   const halfW = BOATHOUSE.width / 2;
   const halfD = BOATHOUSE.depth / 2;
@@ -54,11 +56,18 @@ export function buildBoathouse(scene, interactionSystem, uiManager) {
   boat.receiveShadow = true;
   group.add(boat);
   colliders.push(boxCollider(ox - 1.2, floorY, oz - 0.4, 1.5, 0.7, 3.6));
-  registerExamine(
-    interactionSystem, uiManager, boat,
-    'Examine the boat',
-    'Its own boat is still here, tied up. So how did he leave? [Placeholder — Phase 2 clue content]'
+  registerClue(interactionSystem, uiManager, journal, boat, CLUES.BOAT);
+
+  // Drag marks on the floor, angled off toward the water instead of the
+  // usual launch rails — a purely visual detail backing up the clue text.
+  const dragMarks = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.9, 3.2),
+    flatMaterial({ color: '#241f1a', transparent: true, opacity: 0.35 })
   );
+  dragMarks.rotation.x = -Math.PI / 2;
+  dragMarks.rotation.z = 0.5;
+  dragMarks.position.set(ox - 0.3, floorY + 0.01, oz + 1.4);
+  group.add(dragMarks);
 
   const toolChest = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.5), WOOD_DARK);
   toolChest.position.set(ox + 2.4, floorY + 0.25, oz - 1.8);
@@ -68,7 +77,7 @@ export function buildBoathouse(scene, interactionSystem, uiManager) {
   registerExamine(
     interactionSystem, uiManager, toolChest,
     'Examine the tool chest',
-    'Rope, tar, a rusted hook. Ordinary boathouse tools. [Placeholder — Phase 2 clue content]'
+    'Rope, tar, a rusted hook. Ordinary boathouse tools.'
   );
 
   const workbench = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.75, 0.6), WOOD);
@@ -89,7 +98,7 @@ export function buildBoathouse(scene, interactionSystem, uiManager) {
   registerExamine(
     interactionSystem, uiManager, lantern,
     'Examine the oil lantern',
-    'Cold. Hasn\'t been lit in days. [Placeholder — Phase 2 clue content]'
+    'Cold. Hasn\'t been lit in days.'
   );
 
   scene.add(group);
