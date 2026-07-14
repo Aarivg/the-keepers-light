@@ -8,10 +8,11 @@ const CLEAT = flatMaterial({ color: '#4a4038', roughness: 0.6, metalness: 0.3 })
 /**
  * A mooring cleat with a coiled line, near the sea end of the dock — "the
  * boat" the brief's ending points at. Always interactable, but the prompt
- * and behavior change depending on whether the journal is complete: before
- * that it's just a soft nudge to keep exploring, never a hard blocker.
+ * and behavior change depending on whether the player is ready to leave:
+ * every clue found AND both Mara and Thomas spoken to at least once.
+ * Before that it's just a soft nudge to keep exploring, never a hard blocker.
  */
-export function buildEndingTrigger(scene, interactionSystem, uiManager, journal, onEnding) {
+export function buildEndingTrigger(scene, interactionSystem, uiManager, journal, dialogue, onEnding) {
   const group = new THREE.Group();
 
   const z = DOCK.seaZ - 3;
@@ -31,14 +32,19 @@ export function buildEndingTrigger(scene, interactionSystem, uiManager, journal,
 
   scene.add(group);
 
+  const isReady = () =>
+    journal.allFound() && dialogue.hasSpokenTo('mara') && dialogue.hasSpokenTo('thomas');
+
   interactionSystem.register(cleat, {
-    label: () => (journal.allFound() ? 'Leave the island' : 'The mooring line'),
+    label: () => (isReady() ? 'Leave the island' : 'The mooring line'),
     range: 3.5,
     onInteract: () => {
-      if (journal.allFound()) {
+      if (isReady()) {
         onEnding();
+      } else if (!journal.allFound()) {
+        uiManager.showFeedback('Something keeps you here. There are still answers on this island.');
       } else {
-        uiManager.showFeedback("Something keeps you here. There are still answers on this island.");
+        uiManager.showFeedback("You should talk to both of them before you go.");
       }
     },
   });
