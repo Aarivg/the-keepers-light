@@ -26,7 +26,17 @@ export class UIManager {
     this.endingOverlayEl = document.getElementById('ending-overlay');
     this.endingBodyEl = document.getElementById('ending-body');
     this.endingTallyEl = document.getElementById('ending-tally');
+    this.endingNpcSummariesEl = document.getElementById('ending-npc-summaries');
     this.endingContinueButton = document.getElementById('ending-continue-button');
+
+    this.dialogueMenuEl = document.getElementById('dialogue-menu');
+    this.dialogueNpcNameEl = document.getElementById('dialogue-npc-name');
+    this.dialogueLogEl = document.getElementById('dialogue-log');
+    this.dialogueTypingEl = document.getElementById('dialogue-typing');
+    this.dialogueEvidenceListEl = document.getElementById('dialogue-evidence-list');
+    this.dialogueFormEl = document.getElementById('dialogue-input-form');
+    this.dialogueInputEl = document.getElementById('dialogue-input');
+    this.dialogueSendButton = document.getElementById('dialogue-send-button');
 
     this._selectedClueId = null;
 
@@ -223,9 +233,34 @@ export class UIManager {
 
   // ---------------- Ending overlay ----------------
 
-  showEnding(journal, bodyText) {
+  /** @param {{npcName: string, quote: string|null}[]} npcSummaries */
+  showEnding(journal, bodyText, npcSummaries = []) {
     this.endingBodyEl.textContent = bodyText;
     this._renderTally(this.endingTallyEl, journal.getTally());
+
+    this.endingNpcSummariesEl.innerHTML = '';
+    if (!npcSummaries.length) {
+      const empty = document.createElement('p');
+      empty.className = 'npc-summary-empty';
+      empty.textContent = "You never spoke to anyone else on the island.";
+      this.endingNpcSummariesEl.appendChild(empty);
+    }
+    for (const { npcName, quote } of npcSummaries) {
+      const p = document.createElement('p');
+      p.className = 'npc-summary';
+      const name = document.createElement('span');
+      name.className = 'npc-name';
+      name.textContent = `${npcName}:`;
+      const q = document.createElement('span');
+      q.className = 'npc-quote';
+      // Dialogue lines (including the fallback brush-offs) already read as
+      // natural speech and often carry their own quote marks — don't
+      // double-wrap them.
+      q.textContent = quote || '(had nothing more to say)';
+      p.append(name, q);
+      this.endingNpcSummariesEl.appendChild(p);
+    }
+
     this.endingOverlayEl.classList.remove('hidden');
   }
 
@@ -235,5 +270,67 @@ export class UIManager {
 
   onEndingContinue(fn) {
     this.endingContinueButton.addEventListener('click', fn);
+  }
+
+  // ---------------- Dialogue (NPC conversation) ----------------
+
+  showDialogue(npcName) {
+    this.dialogueNpcNameEl.textContent = npcName;
+    this.dialogueInputEl.value = '';
+    this.dialogueMenuEl.classList.remove('hidden');
+    this.dialogueInputEl.focus();
+  }
+
+  hideDialogue() {
+    this.dialogueMenuEl.classList.add('hidden');
+  }
+
+  clearDialogueLog() {
+    this.dialogueLogEl.innerHTML = '';
+  }
+
+  appendDialogueLine(speakerName, text, isPlayer) {
+    const line = document.createElement('p');
+    line.className = `line ${isPlayer ? 'player' : 'npc'}`;
+    const speaker = document.createElement('span');
+    speaker.className = 'speaker';
+    speaker.textContent = `${speakerName}:`;
+    const body = document.createElement('span');
+    body.textContent = text;
+    line.append(speaker, body);
+    this.dialogueLogEl.appendChild(line);
+    this.dialogueLogEl.scrollTop = this.dialogueLogEl.scrollHeight;
+  }
+
+  setDialogueBusy(busy) {
+    this.dialogueTypingEl.classList.toggle('hidden', !busy);
+    this.dialogueInputEl.disabled = busy;
+    this.dialogueSendButton.disabled = busy;
+    for (const btn of this.dialogueEvidenceListEl.querySelectorAll('button')) {
+      btn.disabled = busy;
+    }
+  }
+
+  /** @param {{id: string, shortDescription: string}[]} clueEntries */
+  renderEvidenceButtons(clueEntries, onPick) {
+    this.dialogueEvidenceListEl.innerHTML = '';
+    for (const entry of clueEntries) {
+      const btn = document.createElement('button');
+      btn.className = 'evidence-button';
+      btn.type = 'button';
+      btn.textContent = entry.shortDescription;
+      btn.addEventListener('click', () => onPick(entry.id));
+      this.dialogueEvidenceListEl.appendChild(btn);
+    }
+  }
+
+  onDialogueSubmit(fn) {
+    this.dialogueFormEl.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = this.dialogueInputEl.value.trim();
+      if (!text) return;
+      this.dialogueInputEl.value = '';
+      fn(text);
+    });
   }
 }
