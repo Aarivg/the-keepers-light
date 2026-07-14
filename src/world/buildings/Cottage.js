@@ -1,16 +1,21 @@
 import * as THREE from 'three';
 import { flatMaterial, boxCollider } from '../utils.js';
 import { COTTAGE } from '../layout.js';
-import { registerExamine } from '../../interaction/registerExamine.js';
+import { CLUES } from '../../journal/clues.js';
+import { registerClue } from '../../journal/registerClue.js';
 
 const WALL = flatMaterial({ color: '#c9bd9e', roughness: 0.9 });
 const WOOD_DARK = flatMaterial({ color: '#3f2f22', roughness: 0.85 });
 const WOOD = flatMaterial({ color: '#5c4630', roughness: 0.8 });
 const ROOF = flatMaterial({ color: '#3a2a28', roughness: 0.95 });
 const FABRIC = flatMaterial({ color: '#5e4550', roughness: 0.9 });
+const FRAME = flatMaterial({ color: '#2b241d', roughness: 0.6 });
+const BRASS = flatMaterial({ color: '#8a7638', roughness: 0.4, metalness: 0.7 });
 
 const WALL_H = 2.9;
 const WALL_T = 0.3;
+
+const CHEST_KEY_FLAG = 'chestKey';
 
 /** Adds an axis-aligned wall segment as both a mesh and an exact-fit collider. */
 function addWall(group, colliders, cx, baseY, cz, sx, sy, sz, material = WALL) {
@@ -23,7 +28,7 @@ function addWall(group, colliders, cx, baseY, cz, sx, sy, sz, material = WALL) {
   return mesh;
 }
 
-export function buildCottage(scene, interactionSystem, uiManager) {
+export function buildCottage(scene, interactionSystem, uiManager, journal) {
   const { x: ox, z: oz, floorY } = COTTAGE;
   const halfW = COTTAGE.width / 2;
   const halfD = COTTAGE.depth / 2;
@@ -79,28 +84,13 @@ export function buildCottage(scene, interactionSystem, uiManager) {
   door.rotation.y = 0.75;
   group.add(door);
 
-  // ---------------- Furnishing: main room ----------------
+  // ---------------- Furnishing: main room (ambient, not tracked clues) ----------------
   const desk = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.75, 0.7), WOOD);
   desk.position.set(ox - halfW + 1.4, floorY + 0.375, oz - halfD + 1.2);
   desk.castShadow = true;
   desk.receiveShadow = true;
   group.add(desk);
   colliders.push(boxCollider(ox - halfW + 1.4, floorY, oz - halfD + 1.2, 1.5, 0.75, 0.7));
-  registerExamine(
-    interactionSystem, uiManager, desk,
-    'Examine the desk',
-    'Papers scattered, mid-thought. Whatever he was writing, he didn\'t finish it. [Placeholder — Phase 2 clue content]'
-  );
-
-  const photoFrame = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.36, 0.03), flatMaterial({ color: '#2b241d' }));
-  photoFrame.position.set(ox - halfW + 1.4, floorY + 0.85, oz - halfD + 1.55);
-  photoFrame.rotation.x = -0.3;
-  group.add(photoFrame);
-  registerExamine(
-    interactionSystem, uiManager, photoFrame,
-    'Examine the photograph',
-    'A family, on this same shore, years ago. One face has been scratched out. [Placeholder — Phase 2 clue content]'
-  );
 
   const armchair = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.9), FABRIC);
   armchair.position.set(ox - halfW + 1.5, floorY + 0.4, oz + halfD - 1.6);
@@ -115,6 +105,23 @@ export function buildCottage(scene, interactionSystem, uiManager) {
   group.add(studyDesk);
   colliders.push(boxCollider(ox + halfW - 1.0, floorY, oz - halfD + 1.0, 1.3, 0.75, 0.6));
 
+  const logbook = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.05, 0.24), flatMaterial({ color: '#3a2f22' }));
+  logbook.position.set(ox + halfW - 1.0, floorY + 0.78, oz - halfD + 1.0);
+  logbook.rotation.y = 0.25;
+  logbook.castShadow = true;
+  group.add(logbook);
+  registerClue(interactionSystem, uiManager, journal, logbook, CLUES.LOGBOOK);
+
+  // A half-open desk drawer holding the unfinished letter.
+  const drawer = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.14, 0.3), WOOD_DARK);
+  drawer.position.set(ox + halfW - 1.0, floorY + 0.5, oz - halfD + 1.32);
+  drawer.castShadow = true;
+  group.add(drawer);
+  const letter = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.16), flatMaterial({ color: '#e4dcc4' }));
+  letter.position.set(ox + halfW - 1.0, floorY + 0.58, oz - halfD + 1.32);
+  group.add(letter);
+  registerClue(interactionSystem, uiManager, journal, drawer, CLUES.LETTER);
+
   const bookshelf = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.1, 0.35), WOOD_DARK);
   bookshelf.position.set(ox + halfW - 0.2, floorY + 1.05, oz - halfD + 0.2);
   bookshelf.castShadow = true;
@@ -126,11 +133,11 @@ export function buildCottage(scene, interactionSystem, uiManager) {
   chest.castShadow = true;
   group.add(chest);
   colliders.push(boxCollider(ox + halfW - 1.3, floorY, oz - 0.6, 0.9, 0.55, 0.55));
-  registerExamine(
-    interactionSystem, uiManager, chest,
-    'Examine the chest',
-    'Locked. There\'s no key in sight. [Placeholder — Phase 2 clue content]'
-  );
+  registerClue(interactionSystem, uiManager, journal, chest, CLUES.LEDGER, {
+    isLocked: () => !journal.hasFlag(CHEST_KEY_FLAG),
+    lockedLabel: 'Examine the locked chest',
+    lockedMessage: "Locked. There's no key in sight.",
+  });
 
   // ---------------- Furnishing: bedroom (south-east) ----------------
   const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.5, 1.4), WOOD_DARK);
@@ -148,15 +155,22 @@ export function buildCottage(scene, interactionSystem, uiManager) {
   group.add(nightstand);
   colliders.push(boxCollider(ox + halfW - 0.3, floorY, oz + halfD - 1.9, 0.5, 0.5, 0.5));
 
-  const journal = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.2), flatMaterial({ color: '#7a2f2f' }));
-  journal.position.set(ox + halfW - 0.3, floorY + 0.53, oz + halfD - 1.9);
-  journal.rotation.y = 0.4;
-  group.add(journal);
-  registerExamine(
-    interactionSystem, uiManager, journal,
-    'Examine the keeper\'s journal',
-    'The handwriting grows harder to read toward the end. [Placeholder — Phase 2 clue content]'
-  );
+  // The family photograph — and the key hidden behind it that unlocks the chest.
+  const photoFrame = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.22, 0.03), FRAME);
+  photoFrame.position.set(ox + halfW - 0.3, floorY + 0.63, oz + halfD - 1.9);
+  photoFrame.rotation.x = -0.35;
+  photoFrame.castShadow = true;
+  group.add(photoFrame);
+  const hiddenKey = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.14, 0.03), BRASS);
+  hiddenKey.position.set(ox + halfW - 0.42, floorY + 0.56, oz + halfD - 1.88);
+  hiddenKey.visible = false; // revealed conceptually once the photo's been examined
+  group.add(hiddenKey);
+  registerClue(interactionSystem, uiManager, journal, photoFrame, CLUES.PHOTOGRAPH, {
+    onFirstFound: (j) => {
+      j.setFlag(CHEST_KEY_FLAG);
+      hiddenKey.visible = true;
+    },
+  });
 
   scene.add(group);
 
