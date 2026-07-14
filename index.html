@@ -20,7 +20,7 @@
           <h1>The Keeper's Light</h1>
           <p class="subtitle">The keeper is gone. The light still turns.</p>
           <button id="start-button">Click to begin</button>
-          <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; Esc to pause</p>
+          <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; J for journal &middot; Esc to pause</p>
         </div>
       </div>
 
@@ -39,10 +39,42 @@
             <input type="checkbox" id="invert-y-toggle" />
           </div>
 
-          <div id="journal-panel-slot"></div>
-
           <button id="resume-button">Resume</button>
-          <p class="hint">Press Esc to resume</p>
+          <p class="hint">Press Esc to resume &middot; Press J for journal</p>
+        </div>
+      </div>
+
+      <div id="journal-menu" class="hidden">
+        <div class="journal-panel">
+          <div class="journal-header">
+            <h2>Journal</h2>
+            <span id="journal-progress"></span>
+          </div>
+
+          <div class="journal-body">
+            <ul id="journal-list"></ul>
+            <div id="journal-detail">
+              <p class="journal-empty-hint">Select a clue on the left to read it.</p>
+            </div>
+          </div>
+
+          <div class="journal-footer">
+            <div class="theory-board">
+              <span class="theory-label">Your theory board:</span>
+              <div id="journal-tally" class="theory-tally"></div>
+            </div>
+          </div>
+
+          <p class="hint">Press J or Esc to close</p>
+        </div>
+      </div>
+
+      <div id="ending-overlay" class="hidden">
+        <div class="ending-panel">
+          <h2>You leave the light behind.</h2>
+          <p id="ending-body"></p>
+          <div id="ending-tally" class="theory-tally"></div>
+          <button id="ending-continue-button">Keep exploring</button>
         </div>
       </div>
     </div>

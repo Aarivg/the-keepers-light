@@ -214,10 +214,6 @@ html, body {
   color: #a9a693;
 }
 
-#journal-panel-slot:empty {
-  display: none;
-}
-
 .pause-panel .hint {
   margin-top: 18px;
   text-align: center;
@@ -226,4 +222,256 @@ html, body {
 #resume-button {
   width: 100%;
   margin-top: 4px;
+}
+
+/* ---------- Journal / theory board ---------- */
+
+#journal-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 3, 5, 0.75);
+}
+
+.journal-panel {
+  width: min(760px, 90vw);
+  max-height: 82vh;
+  padding: 26px 30px;
+  background: rgba(14, 16, 20, 0.94);
+  border: 1px solid rgba(232, 228, 216, 0.15);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.journal-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.journal-header h2 {
+  margin: 0;
+  letter-spacing: 0.05em;
+  color: #f1ead8;
+}
+
+#journal-progress {
+  font-size: 13px;
+  color: #a9a693;
+  font-family: monospace;
+}
+
+.journal-body {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  min-height: 280px;
+  max-height: 50vh;
+}
+
+#journal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid rgba(232, 228, 216, 0.12);
+  padding-right: 14px;
+}
+
+#journal-list li {
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #cfcabb;
+  transition: background 0.12s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#journal-list li:hover {
+  background: rgba(232, 228, 216, 0.08);
+}
+
+#journal-list li.selected {
+  background: rgba(255, 214, 130, 0.14);
+  color: #f1ead8;
+}
+
+#journal-list li .tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(232, 228, 216, 0.2);
+}
+
+#journal-list li .tag-dot.explainable {
+  background: #7fa8c9;
+}
+
+#journal-list li .tag-dot.uncanny {
+  background: #b06b8f;
+}
+
+#journal-empty-state {
+  color: #7d7a6c;
+  font-style: italic;
+  font-size: 14px;
+  padding: 10px;
+}
+
+#journal-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+#journal-detail h3 {
+  margin: 0 0 12px;
+  color: #f1ead8;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+#journal-detail .clue-text {
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 14.5px;
+  color: #d8d3c4;
+  margin: 0 0 18px;
+}
+
+.journal-empty-hint {
+  color: #7d7a6c;
+  font-style: italic;
+}
+
+.tag-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.tag-button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 7px 14px;
+  background: rgba(232, 228, 216, 0.06);
+  border: 1px solid rgba(232, 228, 216, 0.3);
+  color: #cfcabb;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.tag-button:hover {
+  background: rgba(232, 228, 216, 0.14);
+}
+
+.tag-button.active.explainable {
+  background: rgba(127, 168, 201, 0.28);
+  border-color: #7fa8c9;
+  color: #dbe9f4;
+}
+
+.tag-button.active.uncanny {
+  background: rgba(176, 107, 143, 0.28);
+  border-color: #b06b8f;
+  color: #f4dbe9;
+}
+
+.journal-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(232, 228, 216, 0.12);
+}
+
+.theory-board {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.theory-label {
+  font-size: 13px;
+  color: #a9a693;
+  letter-spacing: 0.02em;
+}
+
+.theory-tally {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.theory-tally .explainable { color: #7fa8c9; }
+.theory-tally .uncanny { color: #b06b8f; }
+.theory-tally .untagged { color: #7d7a6c; }
+
+/* ---------- Ending overlay ---------- */
+
+#ending-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 3, 5, 0.88);
+}
+
+.ending-panel {
+  width: min(560px, 90vw);
+  padding: 32px 36px;
+  background: rgba(12, 13, 17, 0.95);
+  border: 1px solid rgba(255, 214, 130, 0.2);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.ending-panel h2 {
+  margin: 0 0 18px;
+  letter-spacing: 0.04em;
+  color: #f1ead8;
+  text-shadow: 0 0 20px rgba(255, 190, 110, 0.3);
+}
+
+#ending-body {
+  line-height: 1.7;
+  color: #d8d3c4;
+  white-space: pre-line;
+  margin: 0 0 20px;
+}
+
+#ending-tally {
+  justify-content: center;
+  margin-bottom: 26px;
+}
+
+#ending-continue-button {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 9px 24px;
+  background: rgba(232, 228, 216, 0.08);
+  border: 1px solid rgba(232, 228, 216, 0.4);
+  color: #e8e4d8;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+#ending-continue-button:hover {
+  background: rgba(232, 228, 216, 0.18);
 }
