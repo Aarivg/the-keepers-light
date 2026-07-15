@@ -107,6 +107,123 @@ html, body {
   opacity: 1;
 }
 
+/* ---------- Chapter transition card ---------- */
+
+#chapter-card {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(2, 3, 5, 0);
+  transition: background 0.6s ease;
+}
+
+#chapter-card.visible {
+  background: rgba(2, 3, 5, 0.55);
+}
+
+.chapter-card-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+#chapter-card.visible .chapter-card-inner {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#chapter-card-title {
+  font-size: 15px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #a9a693;
+}
+
+#chapter-card-subtitle {
+  font-size: 34px;
+  letter-spacing: 0.05em;
+  color: #f1ead8;
+  text-shadow: 0 0 24px rgba(255, 190, 110, 0.35);
+}
+
+/* ---------- Intro sequence ---------- */
+
+#intro-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10, 14, 20, 0.92), rgba(2, 3, 5, 0.98));
+}
+
+.intro-panel {
+  width: min(560px, 88vw);
+  text-align: center;
+  padding: 32px;
+}
+
+#intro-beat {
+  min-height: 96px;
+  font-size: 19px;
+  line-height: 1.65;
+  color: #d8d3c4;
+  font-style: italic;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.intro-controls {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+#intro-continue-button {
+  font-family: inherit;
+  font-size: 16px;
+  padding: 9px 26px;
+  background: rgba(232, 228, 216, 0.08);
+  border: 1px solid rgba(232, 228, 216, 0.4);
+  color: #e8e4d8;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+#intro-continue-button:hover {
+  background: rgba(232, 228, 216, 0.18);
+}
+
+#intro-skip-button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(232, 228, 216, 0.2);
+  color: #a9a693;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+#intro-skip-button:hover {
+  background: rgba(232, 228, 216, 0.08);
+  color: #e8e4d8;
+}
+
 /* ---------- Blocker / Start screen ---------- */
 
 #blocker {

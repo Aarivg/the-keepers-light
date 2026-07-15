@@ -15,12 +15,29 @@
         <div id="prompt" class="hidden"></div>
       </div>
 
-      <div id="blocker">
+      <div id="chapter-card" class="hidden">
+        <div class="chapter-card-inner">
+          <span id="chapter-card-title"></span>
+          <span id="chapter-card-subtitle"></span>
+        </div>
+      </div>
+
+      <div id="intro-screen" class="hidden">
+        <div class="intro-panel">
+          <p id="intro-beat"></p>
+          <div class="intro-controls">
+            <button id="intro-skip-button" type="button">Skip</button>
+            <button id="intro-continue-button" type="button">Continue</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="blocker" class="hidden">
         <div id="start-screen">
           <h1>The Keeper's Light</h1>
           <p class="subtitle">The keeper is gone. The light still turns.</p>
           <button id="start-button">Click to begin</button>
-          <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; J for journal &middot; Esc to pause</p>
+          <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; J for journal &middot; H for a hint &middot; Esc to pause</p>
         </div>
       </div>
 

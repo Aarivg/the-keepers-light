@@ -5,6 +5,7 @@ import { COTTAGE } from '../layout.js';
 import { CLUES } from '../../journal/clues.js';
 import { registerClue } from '../../journal/registerClue.js';
 import { renderDockPhoto, renderSoloPhoto } from '../../journal/PhotoArt.js';
+import { FLAGS } from '../../journal/flags.js';
 
 const DOCK_PHOTO_TEXTURE = new THREE.CanvasTexture(renderDockPhoto());
 DOCK_PHOTO_TEXTURE.colorSpace = THREE.SRGBColorSpace;
@@ -22,8 +23,6 @@ const BRASS = flatMaterial({ color: '#8a7638', map: loadTexture('/generated/text
 
 const WALL_H = 2.9;
 const WALL_T = 0.3;
-
-const CHEST_KEY_FLAG = 'chestKey';
 
 /** Adds an axis-aligned wall segment as both a mesh and an exact-fit collider. */
 function addWall(group, colliders, cx, baseY, cz, sx, sy, sz, material = WALL) {
@@ -142,9 +141,12 @@ export function buildCottage(scene, interactionSystem, uiManager, journal) {
   group.add(chest);
   colliders.push(boxCollider(ox + halfW - 1.3, floorY, oz - 0.6, 0.9, 0.55, 0.55));
   registerClue(interactionSystem, uiManager, journal, chest, CLUES.LEDGER, {
-    isLocked: () => !journal.hasFlag(CHEST_KEY_FLAG),
+    isLocked: () => !journal.hasFlag(FLAGS.CHEST_KEY),
     lockedLabel: 'Examine the locked chest',
     lockedMessage: "Locked. There's no key in sight.",
+    // Chapter 2 retrofit: the same chest also holds a second, smaller key —
+    // no separate fetch-quest object needed. See Cave.js for where it's used.
+    onFirstFound: (j) => j.setFlag(FLAGS.CAVE_KEY),
   });
 
   // ---------------- Furnishing: bedroom (south-east) ----------------
@@ -194,10 +196,27 @@ export function buildCottage(scene, interactionSystem, uiManager, journal) {
   group.add(hiddenKey);
   registerClue(interactionSystem, uiManager, journal, photoFrame, CLUES.PHOTOGRAPH, {
     onFirstFound: (j) => {
-      j.setFlag(CHEST_KEY_FLAG);
+      j.setFlag(FLAGS.CHEST_KEY);
       hiddenKey.visible = true;
     },
   });
+
+  // Interior lighting — previously none; the room relied entirely on
+  // exterior light bleeding through the open door, which left the study and
+  // bedroom (both further from the door) unreadable. Three warm point
+  // lights, one per room, sized to cover their clue objects without
+  // washing out the space.
+  const mainRoomLight = new THREE.PointLight('#ffcf9e', 1.4, 9, 2);
+  mainRoomLight.position.set(ox - halfW + 2, floorY + 2.1, oz - 0.3);
+  group.add(mainRoomLight);
+
+  const studyLight = new THREE.PointLight('#ffcf9e', 1.5, 8, 2);
+  studyLight.position.set(ox + halfW - 1.2, floorY + 2.1, oz - halfD + 1.1);
+  group.add(studyLight);
+
+  const bedroomLight = new THREE.PointLight('#ffcf9e', 1.4, 8, 2);
+  bedroomLight.position.set(ox + halfW - 1.1, floorY + 2.1, oz + halfD - 1.5);
+  group.add(bedroomLight);
 
   scene.add(group);
 

@@ -51,6 +51,31 @@ export const DOCK = {
 export const MARA_POSITION = { x: BOATHOUSE.x - 0.5, z: BOATHOUSE.z + BOATHOUSE.depth / 2 + 4 };
 export const THOMAS_POSITION = { x: COTTAGE.x - 3.3, z: COTTAGE.z + COTTAGE.depth / 2 + 3 };
 
+// Chapter 3 ("The Reckoning") relocates both NPCs to the lighthouse for one
+// final conversation each, flanking the tower door.
+export const MARA_CHAPTER3_POSITION = { x: LIGHTHOUSE.x - 3, z: LIGHTHOUSE.z + LIGHTHOUSE.towerRadius + 3 };
+export const THOMAS_CHAPTER3_POSITION = { x: LIGHTHOUSE.x + 3, z: LIGHTHOUSE.z + LIGHTHOUSE.towerRadius + 3 };
+
+// The sea cave (Chapter 2, "Deeper Waters") — a short walk off-path down to
+// the shore southwest of the cottage, behind a padlocked grate. Tunnel runs
+// along local -X from the mouth into a small chamber; `padRadius` is used
+// the same way building pads are, so Terrain.js/Props.js can flatten and
+// clear a small landing outside the entrance.
+export const CAVE = {
+  x: -62,
+  z: -34,
+  floorY: 0.5,
+  padRadius: 7,
+  mouthWidth: 3.0,
+  mouthHeight: 3.2,
+  tunnelLength: 9,
+  tunnelWidth: 3.0,
+  tunnelHeight: 3.2,
+  chamberWidth: 10,
+  chamberDepth: 9,
+  chamberHeight: 3.6,
+};
+
 export const SPAWN = {
   x: 34,
   z: 76, // near the sea end of the dock, having just arrived by boat
