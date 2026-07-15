@@ -7,6 +7,12 @@
 
 const API_BASE = import.meta.env.VITE_DIALOGUE_API_URL || 'http://localhost:8787';
 
+// Keeps both the persisted save and the per-turn API payload bounded — a
+// long playthrough shouldn't silently balloon localStorage or the context
+// sent to Fable 5 on every message. 20 turns is 10 back-and-forth exchanges,
+// generous for a conversation this game's NPCs are written to have.
+const TURN_LIMIT = 20;
+
 export class DialogueManager {
   constructor(journal) {
     this.journal = journal;
@@ -68,9 +74,28 @@ export class DialogueManager {
       action.type === 'freeText' ? action.text : `[presented evidence: ${action.clueId}]`;
     history.push({ role: 'user', text: userTurnText });
     history.push({ role: 'assistant', text: response.reply });
+    // Trim immediately so both the next save and the next request read an
+    // already-bounded array — never let this grow past TURN_LIMIT.
+    if (history.length > TURN_LIMIT) history.splice(0, history.length - TURN_LIMIT);
     this._spokenTo.add(npcId);
 
     return response;
+  }
+
+  /** @returns {{spokenTo: string[], history: Object<string, {role:string,text:string}[]>}} */
+  serialize() {
+    const history = {};
+    for (const [npcId, turns] of this._history) history[npcId] = turns;
+    return { spokenTo: [...this._spokenTo], history };
+  }
+
+  /** Restores from a save's `serialize()` output — same truncation invariant applies. */
+  restoreState({ spokenTo = [], history = {} } = {}) {
+    for (const npcId of spokenTo) this._spokenTo.add(npcId);
+    for (const [npcId, turns] of Object.entries(history)) {
+      if (!Array.isArray(turns)) continue;
+      this._history.set(npcId, turns.slice(-TURN_LIMIT));
+    }
   }
 }
 
