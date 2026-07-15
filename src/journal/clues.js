@@ -204,3 +204,7 @@ export const CLUE_LIST = Object.values(CLUES);
 // Derived, not hardcoded — adding a clue above automatically raises the
 // "found everything" bar the ending trigger checks against.
 export const TOTAL_CLUE_COUNT = CLUE_LIST.length;
+
+// Id -> clue lookup, used wherever code only has a saved/serialized id
+// string to work with (save/load restore, dialogue's found-clues payload).
+export const CLUE_BY_ID = new Map(CLUE_LIST.map((c) => [c.id, c]));

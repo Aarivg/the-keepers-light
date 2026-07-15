@@ -166,6 +166,16 @@ export function buildCave(scene, interactionSystem, uiManager, journal) {
     },
   });
 
+  // Save/load: if the player already opened the grate in a previous
+  // session, replay that same effect at build time — journal.hasFlag alone
+  // being true doesn't retroactively hide a mesh that's about to be built
+  // visible by default.
+  if (journal.hasFlag(FLAGS.CAVE_OPENED)) {
+    grateGroup.visible = false;
+    interactionSystem.unregister(grateGroup);
+    disableCollider(grateCollider);
+  }
+
   // ---- Clue objects ----
   const shelfA = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 0.35), ROCK_DARK);
   shelfA.position.set(chamberBackX + 0.5, floorY + 0.3, z - 2.8);

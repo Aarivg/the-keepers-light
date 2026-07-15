@@ -57,6 +57,11 @@ export class JournalManager {
     return this._flags.has(name);
   }
 
+  /** All currently-set flags, for save serialization. */
+  getFlags() {
+    return [...this._flags];
+  }
+
   get entries() {
     return this._entries;
   }

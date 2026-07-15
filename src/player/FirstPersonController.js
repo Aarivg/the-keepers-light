@@ -72,6 +72,20 @@ export class FirstPersonController {
     this._applyCameraTransform();
   }
 
+  /**
+   * Restores an exact saved transform (used on Continue) instead of
+   * re-sampling ground height — the save already carries a known-good y, and
+   * re-sampling risks a visible pop if terrain geometry ever shifts slightly
+   * between builds.
+   */
+  restoreTransform(x, y, z, yaw, pitch) {
+    this.position.set(x, y, z);
+    this._groundedY = y;
+    this.yaw = yaw;
+    this.pitch = pitch;
+    this._applyCameraTransform();
+  }
+
   handleMouseLook(dx, dy) {
     const s = 0.0022 * this.sensitivity;
     this.yaw -= dx * s;

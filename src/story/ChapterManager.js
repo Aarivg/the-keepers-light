@@ -55,4 +55,15 @@ export class ChapterManager {
     const info = CHAPTERS[chapter];
     this._listeners.forEach((fn) => fn(info));
   }
+
+  /**
+   * Restores a chapter number from a save without firing onChapterChange —
+   * the title card / arrival toasts are transition celebrations, not
+   * "welcome back" moments. Callers restoring from a save are responsible
+   * for replaying whatever world-side-effects the skipped chapters needed
+   * (see Game.js's `_applyChapterAndWorldEffects`).
+   */
+  setChapter(chapter) {
+    this.chapter = chapter;
+  }
 }
