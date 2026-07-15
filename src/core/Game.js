@@ -10,6 +10,13 @@ import { DialogueManager } from '../dialogue/DialogueManager.js';
 import { ChapterManager, CHAPTERS } from '../story/ChapterManager.js';
 import { HintManager } from '../story/HintManager.js';
 import { SPAWN } from '../world/layout.js';
+import { SaveManager } from '../save/SaveManager.js';
+import { CLUE_BY_ID } from '../journal/clues.js';
+
+// Mirrors the literal strings NPCs.js's onTalk callbacks pass — needed so a
+// continued save can label the ending summary correctly even if the player
+// never reopens a conversation with someone they'd already spoken to.
+const NPC_DISPLAY_NAMES = { mara: 'Mara Kessel', thomas: 'Thomas Voss' };
 
 export class Game {
   constructor() {
@@ -21,6 +28,19 @@ export class Game {
     this.dialogue = new DialogueManager(this.journal);
     this.chapters = new ChapterManager();
     this.hints = new HintManager();
+    this.saveManager = new SaveManager();
+    this._npcDisplayNames = {};
+
+    // Peek at a save up front. The player's actual Continue-vs-New-Game
+    // choice happens later at the start screen, but the world (cave grate
+    // open/closed, Thomas revealed, night lighting) has to be built before
+    // then — so we eagerly apply any save now and let "New Game" simply
+    // reload the page rather than trying to unwind a live, partially-open
+    // 3D scene back to a blank slate. See _startNewGame().
+    const { data: pendingSave, corrupted } = this.saveManager.load();
+    this._pendingSave = pendingSave;
+    this._saveWasCorrupted = corrupted;
+    if (this._pendingSave) this._applySavedJournalAndDialogue(this._pendingSave);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -55,8 +75,6 @@ export class Game {
       maxRange: 3.2,
     });
 
-    this._npcDisplayNames = {};
-
     this.world.attachInteraction(
       this.interaction,
       this.uiManager,
@@ -68,14 +86,22 @@ export class Game {
       (npcId, displayName) => this._openDialogue(npcId, displayName)
     );
 
-    this.journal.onChange(() => this.chapters.checkUnlocks(this.journal, this.dialogue));
+    this.journal.onChange(() => {
+      this.chapters.checkUnlocks(this.journal, this.dialogue);
+      this._autosave();
+    });
     this.chapters.onChapterChange((info) => this._onChapterChange(info));
 
     // World matrices are normally only computed inside renderer.render();
     // force one now so the very first ground raycast in spawnAt() sees
     // correctly-positioned meshes instead of their default identity transform.
     this.scene.updateMatrixWorld(true);
-    this.controller.spawnAt(SPAWN.x, SPAWN.z, SPAWN.yaw);
+    const p = this._pendingSave?.player;
+    if (p && [p.x, p.y, p.z, p.yaw, p.pitch].every(Number.isFinite)) {
+      this.controller.restoreTransform(p.x, p.y, p.z, p.yaw, p.pitch);
+    } else {
+      this.controller.spawnAt(SPAWN.x, SPAWN.z, SPAWN.yaw);
+    }
 
     // 'start' | 'playing' | 'paused' | 'journal' | 'ending' | 'dialogue'
     this._uiMode = 'start';
@@ -83,6 +109,18 @@ export class Game {
     this._clock = new THREE.Clock();
     this._gameplayStarted = false; // first true 'playing' entry shows the Chapter 1 title card
     this._lastHintAt = -Infinity;
+    this._endingShown = this._pendingSave?.endingShown === true;
+
+    // Chapter number + its one-time world side effects (Thomas revealed,
+    // night lighting, NPCs at the lighthouse) are restored last, now that
+    // attachInteraction() has actually built the NPCs/terrain they touch.
+    // Deliberately silent — no title card, no arrival toast; those are
+    // transition celebrations, not "welcome back" moments.
+    if (this._pendingSave) {
+      const savedChapter = this._pendingSave.chapter;
+      const chapter = [1, 2, 3].includes(savedChapter) ? savedChapter : 1;
+      this._applyChapterAndWorldEffects(chapter);
+    }
 
     this._bindLifecycle();
     window.addEventListener('resize', () => this._onResize());
@@ -90,9 +128,11 @@ export class Game {
 
   _bindLifecycle() {
     this.uiManager.showIntro(() => {
-      this.uiManager.showStartScreen(() => {
-        this.audio.start();
-        this.input.requestPointerLock();
+      this.uiManager.showStartScreen({
+        hasSave: this._pendingSave !== null,
+        notice: this._saveWasCorrupted ? "Your last save couldn't be read — starting fresh." : null,
+        onNewGame: () => this._startNewGame(),
+        onContinue: () => this._continueFromSave(),
       });
     });
 
@@ -144,6 +184,98 @@ export class Game {
     this.uiManager.onResumeClicked(() => this.input.requestPointerLock());
     this.uiManager.onEndingContinue(() => this.input.requestPointerLock());
     this.uiManager.onDialogueSubmit((text) => this._sendDialogueAction({ type: 'freeText', text }));
+    this.uiManager.onSaveClicked(() => this._autosave());
+  }
+
+  // ---------------- Save / load ----------------
+
+  /** Applies a save's journal (clues, tags, flags) and dialogue (history,
+   * spokenTo) onto the fresh manager instances — called early in the
+   * constructor, before the world is built, so buildings that bake a
+   * one-time visual state off a flag (the cave grate) see it already set. */
+  _applySavedJournalAndDialogue(save) {
+    const clues = Array.isArray(save.journal?.clues) ? save.journal.clues : [];
+    for (const entry of clues) {
+      const clue = CLUE_BY_ID.get(entry?.id);
+      if (!clue) continue; // unknown id (e.g. a save from a future version) — skip, don't crash
+      this.journal.addClue(clue);
+      if (entry.tag) this.journal.setTag(entry.id, entry.tag);
+    }
+    const flags = Array.isArray(save.journal?.flags) ? save.journal.flags : [];
+    for (const flag of flags) {
+      if (typeof flag === 'string') this.journal.setFlag(flag);
+    }
+
+    this.dialogue.restoreState(save.dialogue ?? {});
+    for (const npcId of Object.keys(NPC_DISPLAY_NAMES)) {
+      if (this.dialogue.hasSpokenTo(npcId)) this._npcDisplayNames[npcId] = NPC_DISPLAY_NAMES[npcId];
+    }
+  }
+
+  /** Replays the one-time chapter-transition world effects silently — no
+   * title card, no arrival toast (see the constructor's call site). */
+  _applyChapterAndWorldEffects(chapter) {
+    this.chapters.setChapter(chapter);
+    if (chapter >= 2) this.world.revealThomas();
+    if (chapter >= 3) {
+      this.world.setNight();
+      this.world.relocateNpcsForChapter3();
+    }
+  }
+
+  _buildSaveData() {
+    return {
+      savedAt: Date.now(),
+      journal: {
+        clues: this.journal.entries.map((e) => ({ id: e.id, tag: e.tag })),
+        flags: this.journal.getFlags(),
+      },
+      chapter: this.chapters.chapter,
+      dialogue: this.dialogue.serialize(),
+      player: {
+        x: this.controller.position.x,
+        y: this.controller.position.y,
+        z: this.controller.position.z,
+        yaw: this.controller.yaw,
+        pitch: this.controller.pitch,
+      },
+      endingShown: this._endingShown === true,
+    };
+  }
+
+  /** @param {{silent?: boolean}} [opts] - silent skips the visible toast
+   * (used mid-dialogue and right after the ending fires, where the toast
+   * would just sit behind that panel — see the brief's "shouldn't interrupt
+   * movement or dialogue"). The write itself always happens either way. */
+  _autosave({ silent = false } = {}) {
+    const ok = this.saveManager.save(this._buildSaveData());
+    if (!ok) {
+      this.uiManager.showSaveIndicator("Couldn't save — storage may be full or unavailable.", true);
+    } else if (!silent) {
+      this.uiManager.showSaveIndicator('Saved.');
+    }
+    return ok;
+  }
+
+  _startNewGame() {
+    this.saveManager.clear();
+    if (this._pendingSave) {
+      // We already eagerly restored world/journal state for the save the
+      // player just chose to discard (see the constructor) — reloading is
+      // far simpler and safer than hand-unwinding a live 3D scene (an
+      // opened grate, a revealed NPC, night lighting) back to a blank slate.
+      window.location.reload();
+      return;
+    }
+    this.audio.start();
+    this.input.requestPointerLock();
+  }
+
+  _continueFromSave() {
+    this._gameplayStarted = true; // suppress the Chapter-1 title card on first lock
+    this.audio.start();
+    this.input.requestPointerLock();
+    this.uiManager.showFeedback('Progress restored.');
   }
 
   _toggleJournal() {
@@ -167,6 +299,7 @@ export class Game {
       this.world.relocateNpcsForChapter3();
       setTimeout(() => this.uiManager.showFeedback('Mara and Thomas have made their way to the lighthouse.'), 1800);
     }
+    this._autosave();
   }
 
   _showHint() {
@@ -210,6 +343,7 @@ export class Game {
   _closeDialogue() {
     this.uiManager.hideDialogue();
     this.input.requestPointerLock(); // 'lock' handler restores _uiMode = 'playing'
+    this._autosave(); // "NPC conversation ending" — one of the brief's named autosave triggers
   }
 
   async _sendDialogueAction(action) {
@@ -235,6 +369,9 @@ export class Game {
     if (this._currentNpcId !== npcId) return;
     this.uiManager.setDialogueBusy(false);
     this.uiManager.appendDialogueLine(displayName, reply, false);
+    // Silent — the dialogue panel covers the toast's corner anyway, and a
+    // visible "Saved" after every single line would be noisy mid-conversation.
+    this._autosave({ silent: true });
   }
 
   _triggerEnding() {
@@ -260,6 +397,7 @@ export class Game {
 
     this.uiManager.showEnding(this.journal, body, npcSummaries);
     this.input.exitPointerLock();
+    this._autosave({ silent: true }); // the overlay covers the toast's corner
   }
 
   _onResize() {

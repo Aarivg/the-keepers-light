@@ -12,6 +12,8 @@ export class UIManager {
     this.promptEl = document.getElementById('prompt');
     this.blockerEl = document.getElementById('blocker');
     this.startButton = document.getElementById('start-button');
+    this.continueButton = document.getElementById('continue-button');
+    this.startScreenNoticeEl = document.getElementById('start-screen-notice');
 
     this.chapterCardEl = document.getElementById('chapter-card');
     this.chapterCardTitleEl = document.getElementById('chapter-card-title');
@@ -24,6 +26,7 @@ export class UIManager {
     this.introContinueButton = document.getElementById('intro-continue-button');
     this.pauseMenuEl = document.getElementById('pause-menu');
     this.resumeButton = document.getElementById('resume-button');
+    this.saveButton = document.getElementById('save-button');
     this.sensitivitySlider = document.getElementById('sensitivity-slider');
     this.sensitivityValue = document.getElementById('sensitivity-value');
     this.invertYToggle = document.getElementById('invert-y-toggle');
@@ -54,6 +57,8 @@ export class UIManager {
 
     this._toastTimer = null;
     this._toastEl = this._createToastEl();
+    this._saveToastTimer = null;
+    this._saveToastEl = this._createSaveToastEl();
 
     this.settings = this._loadSettings();
     this.sensitivitySlider.value = this.settings.sensitivity;
@@ -107,6 +112,25 @@ export class UIManager {
     return el;
   }
 
+  _createSaveToastEl() {
+    const el = document.createElement('div');
+    el.id = 'save-toast';
+    document.getElementById('hud').appendChild(el);
+    return el;
+  }
+
+  /** Small, separate indicator so an autosave never clobbers a feedback
+   * toast the player is mid-reading (e.g. "Journal updated: ..."). */
+  showSaveIndicator(text, isWarning = false) {
+    this._saveToastEl.textContent = text;
+    this._saveToastEl.classList.toggle('warning', isWarning);
+    this._saveToastEl.classList.add('visible');
+    clearTimeout(this._saveToastTimer);
+    this._saveToastTimer = setTimeout(() => {
+      this._saveToastEl.classList.remove('visible');
+    }, isWarning ? 4000 : 1800);
+  }
+
   // ---------------- Intro sequence ----------------
 
   /** Plays the pre-start-screen intro beats; `onComplete` fires on the last "Begin" click or Skip, either way — Game.js chains it into showStartScreen(). */
@@ -158,13 +182,46 @@ export class UIManager {
     }, 3400);
   }
 
-  showStartScreen(onStart) {
+  /**
+   * @param {Object} opts
+   * @param {boolean} opts.hasSave - toggles Continue's visibility and
+   *   whether the primary button reads "Click to begin" or "New Game".
+   * @param {string|null} [opts.notice] - shown above the buttons (e.g. "your
+   *   save couldn't be read") — null/omitted hides the notice entirely.
+   * @param {() => void} opts.onNewGame - fired after confirmation, if a save
+   *   existed (starting fresh with no save present needs no confirmation).
+   * @param {() => void} opts.onContinue - fired when Continue is clicked;
+   *   only reachable when hasSave is true.
+   */
+  showStartScreen({ hasSave, notice = null, onNewGame, onContinue }) {
     this.blockerEl.classList.remove('hidden');
-    const handler = () => {
-      this.startButton.removeEventListener('click', handler);
-      onStart();
+
+    this.startButton.textContent = hasSave ? 'New Game' : 'Click to begin';
+    this.continueButton.classList.toggle('hidden', !hasSave);
+
+    if (notice) {
+      this.startScreenNoticeEl.textContent = notice;
+      this.startScreenNoticeEl.classList.remove('hidden');
+    } else {
+      this.startScreenNoticeEl.classList.add('hidden');
+    }
+
+    const cleanup = () => {
+      this.startButton.removeEventListener('click', startHandler);
+      this.continueButton.removeEventListener('click', continueHandler);
     };
-    this.startButton.addEventListener('click', handler);
+    const startHandler = () => {
+      if (hasSave && !window.confirm('This will erase your current save — continue?')) return;
+      cleanup();
+      onNewGame();
+    };
+    const continueHandler = () => {
+      cleanup();
+      onContinue();
+    };
+
+    this.startButton.addEventListener('click', startHandler);
+    this.continueButton.addEventListener('click', continueHandler);
   }
 
   hideStartScreen() {
@@ -181,6 +238,10 @@ export class UIManager {
 
   onResumeClicked(fn) {
     this.resumeButton.addEventListener('click', fn);
+  }
+
+  onSaveClicked(fn) {
+    this.saveButton.addEventListener('click', fn);
   }
 
   setCrosshairActive(active) {
