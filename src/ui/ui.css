@@ -107,6 +107,35 @@ html, body {
   opacity: 1;
 }
 
+/* ---------- Save indicator (separate from the feedback toast so an
+   autosave never clobbers a "Journal updated: ..." message mid-read) ---------- */
+
+#save-toast {
+  position: absolute;
+  bottom: 22px;
+  right: 22px;
+  padding: 6px 12px;
+  background: rgba(10, 10, 12, 0.65);
+  border-left: 2px solid rgba(232, 228, 216, 0.4);
+  border-radius: 2px;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: #a9a693;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 11;
+  pointer-events: none;
+}
+
+#save-toast.visible {
+  opacity: 1;
+}
+
+#save-toast.warning {
+  border-left-color: rgba(201, 138, 107, 0.8);
+  color: #c98a6b;
+}
+
 /* ---------- Chapter transition card ---------- */
 
 #chapter-card {
@@ -256,7 +285,7 @@ html, body {
   margin: 0 0 28px;
 }
 
-#start-button, #resume-button {
+#start-button, #resume-button, #continue-button, #save-button {
   font-family: inherit;
   font-size: 17px;
   padding: 10px 28px;
@@ -269,8 +298,33 @@ html, body {
   transition: background 0.15s ease, transform 0.15s ease;
 }
 
-#start-button:hover, #resume-button:hover {
+#start-button:hover, #resume-button:hover, #continue-button:hover, #save-button:hover {
   background: rgba(232, 228, 216, 0.18);
+}
+
+.start-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* Continue is the primary action when a save exists — a warmer border
+   distinguishes it from the secondary "start fresh" button beside it. */
+#continue-button {
+  border-color: rgba(255, 214, 130, 0.6);
+  background: rgba(255, 214, 130, 0.1);
+}
+
+#continue-button:hover {
+  background: rgba(255, 214, 130, 0.2);
+}
+
+.notice {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: #c98a6b;
+  font-style: italic;
 }
 
 .hint {
@@ -336,9 +390,14 @@ html, body {
   text-align: center;
 }
 
-#resume-button {
-  width: 100%;
+.pause-buttons {
+  display: flex;
+  gap: 10px;
   margin-top: 4px;
+}
+
+#save-button, #resume-button {
+  flex: 1;
 }
 
 /* ---------- Journal / theory board ---------- */

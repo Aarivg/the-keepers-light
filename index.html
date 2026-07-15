@@ -36,7 +36,11 @@
         <div id="start-screen">
           <h1>The Keeper's Light</h1>
           <p class="subtitle">The keeper is gone. The light still turns.</p>
-          <button id="start-button">Click to begin</button>
+          <p id="start-screen-notice" class="notice hidden"></p>
+          <div class="start-buttons">
+            <button id="continue-button" class="hidden">Continue</button>
+            <button id="start-button">Click to begin</button>
+          </div>
           <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; J for journal &middot; H for a hint &middot; Esc to pause</p>
         </div>
       </div>
@@ -56,7 +60,10 @@
             <input type="checkbox" id="invert-y-toggle" />
           </div>
 
-          <button id="resume-button">Resume</button>
+          <div class="pause-buttons">
+            <button id="save-button">Save</button>
+            <button id="resume-button">Resume</button>
+          </div>
           <p class="hint">Press Esc to resume &middot; Press J for journal</p>
         </div>
       </div>
