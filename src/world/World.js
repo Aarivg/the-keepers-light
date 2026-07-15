@@ -5,6 +5,7 @@ import { buildProps } from './Props.js';
 import { buildLighthouse } from './buildings/Lighthouse.js';
 import { buildCottage } from './buildings/Cottage.js';
 import { buildBoathouse } from './buildings/Boathouse.js';
+import { buildCave } from './buildings/Cave.js';
 import { buildEndingTrigger } from './EndingTrigger.js';
 import { buildNPCs } from './NPCs.js';
 import { WORLD_BOUND_RADIUS } from './layout.js';
@@ -36,7 +37,11 @@ export class World {
     this.worldBoundRadius = WORLD_BOUND_RADIUS;
 
     scene.background = SKY_HORIZON.clone().lerp(SKY_ZENITH, 0.5);
-    scene.fog = new THREE.FogExp2(FOG_COLOR, 0.011);
+    // Halved from the original 0.011 — mid-distance geometry (the far
+    // shoreline, the lighthouse from the dock) was unreadable before this;
+    // still enough density that the island reads as foggy/isolated rather
+    // than flat and clear at the horizon.
+    scene.fog = new THREE.FogExp2(FOG_COLOR, 0.0055);
     scene.add(buildSkyDome());
 
     this._setupLighting();
@@ -51,11 +56,18 @@ export class World {
     this._interactableBuildingsPending = []; // filled by attachInteraction()
   }
 
+  // Brightness pass (this phase): every value below is raised from Phase 4's
+  // originals (hemi 0.65, sun 1.6, fill 0.35) — colors are untouched, so the
+  // dusk-orange/slate-blue mood holds, but the scene reads as "moody, not
+  // murky." Kept as instance fields (`this.sun`/`this.fill`/`this.hemi`) so
+  // `setNight()` (Chapter 3) can retune them later without rebuilding the
+  // scene graph.
   _setupLighting() {
-    const hemi = new THREE.HemisphereLight('#8892b0', '#2a2018', 0.65);
+    const hemi = new THREE.HemisphereLight('#8892b0', '#2a2018', 0.95);
     this.scene.add(hemi);
+    this.hemi = hemi;
 
-    const sun = new THREE.DirectionalLight('#ffab6b', 1.6);
+    const sun = new THREE.DirectionalLight('#ffab6b', 2.3);
     sun.position.set(-60, 45, 30);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -69,35 +81,71 @@ export class World {
     this.scene.add(sun);
     this.sun = sun;
 
-    const fill = new THREE.DirectionalLight('#4a5a7a', 0.35);
+    const fill = new THREE.DirectionalLight('#4a5a7a', 0.6);
     fill.position.set(50, 30, -40);
     this.scene.add(fill);
+    this.fill = fill;
   }
 
   /**
-   * Builds the three structures, their clues, ambient props, and the dock's
-   * ending trigger. `journal` and `audio` are threaded through to the
-   * buildings so clue objects can log to the journal and (for the radio)
-   * play a sound; `onEnding` fires once the player leaves with all clues
-   * found; `onTalk(npcId, displayName)` fires when the player interacts
-   * with Mara or Thomas, in place of the usual examine/clue flow.
+   * Chapter 3 ("The Reckoning") happens at night: dims the sun near to
+   * nothing (there's no more daylight left to speak of), cools and slightly
+   * dims the hemisphere fill (moonlight, not sunlight), and thickens the fog
+   * a touch for a night-mist read — while staying well short of undoing the
+   * brightness pass above; interior/beacon point lights carry legibility
+   * once the sun's gone. Idempotent — safe to call once, from
+   * Game.js on the Chapter 3 transition.
    */
-  attachInteraction(interactionSystem, uiManager, journal, audio, dialogue, onEnding, onTalk) {
-    const lighthouse = buildLighthouse(this.scene, interactionSystem, uiManager, journal, audio);
+  setNight() {
+    this.sun.intensity = 0.12;
+    this.hemi.intensity = 0.55;
+    this.hemi.color.set('#5c6a8c');
+    this.hemi.groundColor.set('#0d1016');
+    this.fill.intensity = 0.4;
+    this.fill.color.set('#3a4a6a');
+    this.scene.fog.color.set('#20232e');
+    this.scene.fog.density = 0.007;
+    this.scene.background = new THREE.Color('#12141c');
+  }
+
+  /**
+   * Builds the three structures, the sea cave, ambient props, and the ending
+   * triggers. `journal` and `audio` are threaded through to the buildings so
+   * clue objects can log to the journal and (for the radio) play a sound;
+   * `getChapter` (a `() => chapterManager.chapter` closure from Game.js)
+   * gates the two ending triggers (dock nudge / lamp-room finale — see
+   * EndingTrigger.js and Lighthouse.js's `railing`); `onEnding` fires once
+   * the player actually ends it at the lamp room; `onTalk(npcId,
+   * displayName)` fires when the player interacts with Mara or Thomas.
+   */
+  attachInteraction(interactionSystem, uiManager, journal, audio, dialogue, getChapter, onEnding, onTalk) {
+    const lighthouse = buildLighthouse(this.scene, interactionSystem, uiManager, journal, audio, getChapter, onEnding);
     const cottage = buildCottage(this.scene, interactionSystem, uiManager, journal);
     const boathouse = buildBoathouse(this.scene, interactionSystem, uiManager, journal);
+    const cave = buildCave(this.scene, interactionSystem, uiManager, journal);
     const props = buildProps(this.scene, this._terrain);
-    const ending = buildEndingTrigger(this.scene, interactionSystem, uiManager, journal, dialogue, onEnding);
+    const ending = buildEndingTrigger(this.scene, interactionSystem, uiManager, journal, dialogue, getChapter);
     const npcs = buildNPCs(this.scene, interactionSystem, uiManager, this._terrain, onTalk);
     this.npcPortraits = npcs.portraits;
+    this._npcs = npcs;
 
-    for (const part of [lighthouse, cottage, boathouse, ending, npcs]) {
+    for (const part of [lighthouse, cottage, boathouse, cave, ending, npcs]) {
       this._colliders.push(...part.colliders);
       this._groundMeshes.push(...part.groundMeshes);
       this._updatables.push(part);
     }
     this._colliders.push(...props.colliders);
     this._updatables.push(props);
+  }
+
+  /** Chapter 2 transition: Thomas "arrives" at the cottage — see NPCs.js. */
+  revealThomas() {
+    this._npcs.revealThomas((c) => this._colliders.push(c));
+  }
+
+  /** Chapter 3 transition: both NPCs converge on the lighthouse — see NPCs.js. */
+  relocateNpcsForChapter3() {
+    this._npcs.relocateForChapter3(this._terrain);
   }
 
   /** `activeNpcId` is set while the player is mid-conversation with an NPC, so NPCs.js can play a talking animation for that one. */

@@ -6,13 +6,15 @@ const ROPE = flatMaterial({ color: '#7a6a4a', roughness: 0.9 });
 const CLEAT = flatMaterial({ color: '#4a4038', roughness: 0.6, metalness: 0.3 });
 
 /**
- * A mooring cleat with a coiled line, near the sea end of the dock — "the
- * boat" the brief's ending points at. Always interactable, but the prompt
- * and behavior change depending on whether the player is ready to leave:
- * every clue found AND both Mara and Thomas spoken to at least once.
- * Before that it's just a soft nudge to keep exploring, never a hard blocker.
+ * A mooring cleat with a coiled line, near the sea end of the dock. Used to
+ * be where the game ended; this phase moves that to the lighthouse's lamp
+ * room instead (Chapter 3, "The Reckoning" — see Lighthouse.js's
+ * `buildLampRoomEnding` and README's chapter-structure note), so this spot's
+ * job now is purely a soft nudge: while Chapter 1/2 conditions aren't met
+ * yet, gently explain why; once Chapter 3 has begun, redirect the player
+ * back to the light rather than ending the game here.
  */
-export function buildEndingTrigger(scene, interactionSystem, uiManager, journal, dialogue, onEnding) {
+export function buildEndingTrigger(scene, interactionSystem, uiManager, journal, dialogue, getChapter) {
   const group = new THREE.Group();
 
   const z = DOCK.seaZ - 3;
@@ -32,17 +34,17 @@ export function buildEndingTrigger(scene, interactionSystem, uiManager, journal,
 
   scene.add(group);
 
-  const isReady = () =>
-    journal.allFound() && dialogue.hasSpokenTo('mara') && dialogue.hasSpokenTo('thomas');
-
   interactionSystem.register(cleat, {
-    label: () => (isReady() ? 'Leave the island' : 'The mooring line'),
+    label: 'The mooring line',
     range: 3.5,
     onInteract: () => {
-      if (isReady()) {
-        onEnding();
+      const chapter = getChapter();
+      if (chapter >= 3) {
+        uiManager.showFeedback("This isn't where it ends anymore. Go back to the light.");
       } else if (!journal.allFound()) {
         uiManager.showFeedback('Something keeps you here. There are still answers on this island.');
+      } else if (!dialogue.hasSpokenTo('mara')) {
+        uiManager.showFeedback('The boat captain by the dock might know more than she\'s letting on.');
       } else {
         uiManager.showFeedback("You should talk to both of them before you go.");
       }

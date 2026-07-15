@@ -42,7 +42,13 @@ function buildRing({ cx, cz, baseY, height, radius, thickness, doorAngle, materi
   return group;
 }
 
-export function buildLighthouse(scene, interactionSystem, uiManager, journal, audio) {
+/**
+ * `getChapter` and `onEnding` are only used for the lamp-room ending trigger
+ * added near the bottom of this function (Chapter 3, "The Reckoning") — see
+ * README's chapter-structure note. Everything else about the tower is
+ * unchanged from Phase 3/4.
+ */
+export function buildLighthouse(scene, interactionSystem, uiManager, journal, audio, getChapter, onEnding) {
   const { x: cx, z: cz, floorY, towerRadius, wallThickness, doorAngle } = LIGHTHOUSE;
   const innerRadius = towerRadius - wallThickness;
 
@@ -113,6 +119,20 @@ export function buildLighthouse(scene, interactionSystem, uiManager, journal, au
     groundMeshes.push(tread);
   }
 
+  // Wall-sconce lights spaced up the stairwell shaft — previously the
+  // entire mid-tower climb (8m of height) had no light source of its own at
+  // all, relying on whatever leaked down from the lamp room above.
+  const sconceCount = 4;
+  for (let i = 1; i <= sconceCount; i++) {
+    const t = i / (sconceCount + 1);
+    const sconceAngle = doorAngle + Math.PI + t * numTurns * Math.PI * 2;
+    const sconce = new THREE.PointLight('#ffb35c', 1.3, 10, 2);
+    const sx = cx + Math.cos(sconceAngle) * (stairRadius + 1.3);
+    const sz = cz + Math.sin(sconceAngle) * (stairRadius + 1.3);
+    sconce.position.set(sx, floorY + t * climbHeight + 1.2, sz);
+    group.add(sconce);
+  }
+
   // Landing at the top of the stairwell, flush with the lamp room floor.
   const landing = new THREE.Mesh(
     new THREE.CylinderGeometry(innerRadius - 0.15, innerRadius - 0.15, 0.2, 24),
@@ -136,6 +156,13 @@ export function buildLighthouse(scene, interactionSystem, uiManager, journal, au
   desk.traverse((c) => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
   group.add(desk);
   colliders.push(colliderFromObjectSafe(deskTop));
+
+  // Ground-floor station light — previously unlit except for whatever
+  // daylight made it through the door gap, which left the desk/radio/chart
+  // unreadable straight on.
+  const stationLight = new THREE.PointLight('#ffcf9e', 1.6, 9, 2);
+  stationLight.position.set(cx + 1.6, floorY + 2.2, cz + 1.2);
+  group.add(stationLight);
 
   const radio = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, 0.3), METAL);
   radio.position.set(cx + 1.85, floorY + 0.93, cz + 1.05);
@@ -211,6 +238,23 @@ export function buildLighthouse(scene, interactionSystem, uiManager, journal, au
   beamCone.position.set(11, 0, 0);
   beaconGroup.add(beamCone);
   group.add(beaconGroup);
+
+  // Chapter 3 ("The Reckoning") ending trigger — replaces the dock's old
+  // "leave the island" prompt (see EndingTrigger.js). A small brass plaque
+  // on the gallery railing, reachable from the landing; inert (a soft nudge,
+  // like the dock's) until Chapter 3 actually begins.
+  const railing = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.22), BRASS);
+  railing.position.set(cx, lampFloorY + 0.95, cz - (innerRadius - 0.6));
+  railing.castShadow = true;
+  group.add(railing);
+  interactionSystem.register(railing, {
+    label: () => (getChapter() >= 3 ? 'Leave the light behind' : 'The gallery railing'),
+    range: 3,
+    onInteract: () => {
+      if (getChapter() >= 3) onEnding();
+      else uiManager.showFeedback("Not yet. There's more to understand first.");
+    },
+  });
 
   // A slightly-ajar door prop at the entrance — purely visual, no collider,
   // hinting something was left in a hurry.

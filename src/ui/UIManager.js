@@ -4,6 +4,7 @@
 // they call into this class (e.g. registerClue.js calls showFeedback()).
 
 import { TAGS } from '../journal/JournalManager.js';
+import { INTRO_BEATS } from '../story/introContent.js';
 
 export class UIManager {
   constructor() {
@@ -11,6 +12,16 @@ export class UIManager {
     this.promptEl = document.getElementById('prompt');
     this.blockerEl = document.getElementById('blocker');
     this.startButton = document.getElementById('start-button');
+
+    this.chapterCardEl = document.getElementById('chapter-card');
+    this.chapterCardTitleEl = document.getElementById('chapter-card-title');
+    this.chapterCardSubtitleEl = document.getElementById('chapter-card-subtitle');
+    this._chapterCardTimer = null;
+
+    this.introScreenEl = document.getElementById('intro-screen');
+    this.introBeatEl = document.getElementById('intro-beat');
+    this.introSkipButton = document.getElementById('intro-skip-button');
+    this.introContinueButton = document.getElementById('intro-continue-button');
     this.pauseMenuEl = document.getElementById('pause-menu');
     this.resumeButton = document.getElementById('resume-button');
     this.sensitivitySlider = document.getElementById('sensitivity-slider');
@@ -94,6 +105,57 @@ export class UIManager {
     el.id = 'feedback-toast';
     document.getElementById('hud').appendChild(el);
     return el;
+  }
+
+  // ---------------- Intro sequence ----------------
+
+  /** Plays the pre-start-screen intro beats; `onComplete` fires on the last "Begin" click or Skip, either way — Game.js chains it into showStartScreen(). */
+  showIntro(onComplete) {
+    let i = 0;
+    this.introScreenEl.classList.remove('hidden');
+
+    const render = () => {
+      this.introBeatEl.style.opacity = '0';
+      setTimeout(() => {
+        this.introBeatEl.textContent = INTRO_BEATS[i];
+        this.introContinueButton.textContent = i === INTRO_BEATS.length - 1 ? 'Begin' : 'Continue';
+        this.introBeatEl.style.opacity = '1';
+      }, 220);
+    };
+    render();
+
+    const finish = () => {
+      this.introContinueButton.removeEventListener('click', onContinue);
+      this.introSkipButton.removeEventListener('click', finish);
+      this.introScreenEl.classList.add('hidden');
+      onComplete();
+    };
+    const onContinue = () => {
+      i++;
+      if (i >= INTRO_BEATS.length) finish();
+      else render();
+    };
+
+    this.introContinueButton.addEventListener('click', onContinue);
+    this.introSkipButton.addEventListener('click', finish);
+  }
+
+  // ---------------- Chapter transition card ----------------
+
+  /** @param {{title: string, subtitle: string}} info */
+  showChapterCard(info) {
+    clearTimeout(this._chapterCardTimer);
+    this.chapterCardTitleEl.textContent = info.title;
+    this.chapterCardSubtitleEl.textContent = info.subtitle;
+    this.chapterCardEl.classList.remove('hidden');
+    // rAF so the 'hidden' removal and 'visible' addition don't collapse into
+    // the same style recalc — otherwise the opacity/transform transition has
+    // nothing to animate from.
+    requestAnimationFrame(() => this.chapterCardEl.classList.add('visible'));
+    this._chapterCardTimer = setTimeout(() => {
+      this.chapterCardEl.classList.remove('visible');
+      this._chapterCardTimer = setTimeout(() => this.chapterCardEl.classList.add('hidden'), 650);
+    }, 3400);
   }
 
   showStartScreen(onStart) {

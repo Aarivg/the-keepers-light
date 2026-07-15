@@ -7,6 +7,8 @@ import { FirstPersonController } from '../player/FirstPersonController.js';
 import { InteractionSystem } from '../interaction/InteractionSystem.js';
 import { JournalManager } from '../journal/JournalManager.js';
 import { DialogueManager } from '../dialogue/DialogueManager.js';
+import { ChapterManager, CHAPTERS } from '../story/ChapterManager.js';
+import { HintManager } from '../story/HintManager.js';
 import { SPAWN } from '../world/layout.js';
 
 export class Game {
@@ -17,6 +19,8 @@ export class Game {
     this.input = new InputManager(this.canvas);
     this.journal = new JournalManager();
     this.dialogue = new DialogueManager(this.journal);
+    this.chapters = new ChapterManager();
+    this.hints = new HintManager();
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -25,7 +29,10 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    // Raised from 1.05 as part of the brightness pass — ACES rolls off
+    // highlights aggressively, so this needed to move with the light
+    // intensity increases in World.js, not instead of them.
+    this.renderer.toneMappingExposure = 1.4;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -56,9 +63,13 @@ export class Game {
       this.journal,
       this.audio,
       this.dialogue,
+      () => this.chapters.chapter,
       () => this._triggerEnding(),
       (npcId, displayName) => this._openDialogue(npcId, displayName)
     );
+
+    this.journal.onChange(() => this.chapters.checkUnlocks(this.journal, this.dialogue));
+    this.chapters.onChapterChange((info) => this._onChapterChange(info));
 
     // World matrices are normally only computed inside renderer.render();
     // force one now so the very first ground raycast in spawnAt() sees
@@ -70,15 +81,19 @@ export class Game {
     this._uiMode = 'start';
     this._playing = false;
     this._clock = new THREE.Clock();
+    this._gameplayStarted = false; // first true 'playing' entry shows the Chapter 1 title card
+    this._lastHintAt = -Infinity;
 
     this._bindLifecycle();
     window.addEventListener('resize', () => this._onResize());
   }
 
   _bindLifecycle() {
-    this.uiManager.showStartScreen(() => {
-      this.audio.start();
-      this.input.requestPointerLock();
+    this.uiManager.showIntro(() => {
+      this.uiManager.showStartScreen(() => {
+        this.audio.start();
+        this.input.requestPointerLock();
+      });
     });
 
     // Pointer lock is only ever (re)acquired when we want to return to
@@ -96,6 +111,11 @@ export class Game {
       this.controller.setEnabled(true);
       this._playing = true;
       this.audio.resume();
+
+      if (!this._gameplayStarted) {
+        this._gameplayStarted = true;
+        this.uiManager.showChapterCard(CHAPTERS[this.chapters.chapter]);
+      }
     });
 
     // Losing pointer lock means either the player pressed Escape (browser
@@ -114,6 +134,7 @@ export class Game {
     });
 
     this.input.onAction('journal', () => this._toggleJournal());
+    this.input.onAction('hint', () => this._showHint());
 
     this.input.onAction('escape', () => {
       if (this._uiMode === 'journal') this._toggleJournal();
@@ -134,6 +155,35 @@ export class Game {
       this.uiManager.showJournal(this.journal);
       this.input.exitPointerLock();
     }
+  }
+
+  _onChapterChange(info) {
+    this.uiManager.showChapterCard(info);
+    if (info.id === 2) {
+      this.world.revealThomas();
+      setTimeout(() => this.uiManager.showFeedback('Thomas Voss has arrived at the cottage.'), 1800);
+    } else if (info.id === 3) {
+      this.world.setNight();
+      this.world.relocateNpcsForChapter3();
+      setTimeout(() => this.uiManager.showFeedback('Mara and Thomas have made their way to the lighthouse.'), 1800);
+    }
+  }
+
+  _showHint() {
+    if (this._uiMode !== 'playing') return;
+    const now = performance.now();
+    if (now - this._lastHintAt < 4000) return;
+    this._lastHintAt = now;
+
+    const text = this.hints.getHint({
+      chapter: this.chapters.chapter,
+      journal: this.journal,
+      dialogue: this.dialogue,
+      playerX: this.controller.position.x,
+      playerZ: this.controller.position.z,
+      endingShown: this._endingShown === true,
+    });
+    this.uiManager.showFeedback(text);
   }
 
   _openDialogue(npcId, displayName) {
@@ -176,6 +226,7 @@ export class Game {
 
     this.uiManager.setDialogueBusy(true);
     const { reply } = await this.dialogue.send(npcId, action);
+    this.chapters.checkUnlocks(this.journal, this.dialogue);
 
     // If the player closed this conversation or opened a different NPC
     // while the request was in flight, the reply is already correctly
@@ -188,10 +239,18 @@ export class Game {
 
   _triggerEnding() {
     this._uiMode = 'ending';
+    this._endingShown = true;
+    // Chapter 3 requires every clue found (original 9 + the 4 cave clues —
+    // see ChapterManager), so by the time this fires the player necessarily
+    // has all of it; the cave threads (bigger/older smuggling operation, the
+    // unresolved third initials, Old Rourke's echoing final entries) are
+    // folded in unconditionally rather than checked for.
     const body = [
-      "The boat that isn't his rocks against the dock. Behind you, the light keeps turning, on schedule, for no one.",
+      'The lamp keeps turning behind you, indifferent, exactly on schedule. Whatever was here has already happened; nothing in this room needs you to understand it.',
       '',
-      "You didn't find him. You found what he left behind — and it doesn't agree with itself.",
+      "You know more now than you did when the boat dropped you at the dock — a bigger, older arrangement than one captain's word accounted for; a name that doesn't belong to anyone you've met; a bell, a broken lamp, and a logbook decades older than Elias's, saying the same thing his did.",
+      '',
+      "None of it agrees with itself. You didn't find him. You found what he left behind, and what was left behind before him — and it still doesn't add up to one answer.",
     ].join('\n');
 
     const npcSummaries = this.dialogue.spokenToIds.map((npcId) => ({

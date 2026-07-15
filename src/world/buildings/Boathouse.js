@@ -94,9 +94,15 @@ export function buildBoathouse(scene, interactionSystem, uiManager, journal) {
   const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.3, 0.22), METAL);
   lantern.position.set(ox + 2.0, floorY + 2.05, oz + 1.1);
   group.add(lantern);
-  const lanternLight = new THREE.PointLight('#ffb35c', 1.2, 8, 2);
+  const lanternLight = new THREE.PointLight('#ffb35c', 1.9, 9, 2);
   lanternLight.position.copy(lantern.position);
   group.add(lanternLight);
+
+  // A second fill light over the boat itself — the lantern alone left the
+  // far (boat/drag-marks) side of the room too dim to read comfortably.
+  const boatLight = new THREE.PointLight('#ffb35c', 1.1, 7, 2);
+  boatLight.position.set(ox - 1.0, floorY + 2.0, oz - 0.6);
+  group.add(boatLight);
   registerExamine(
     interactionSystem, uiManager, lantern,
     'Examine the oil lantern',

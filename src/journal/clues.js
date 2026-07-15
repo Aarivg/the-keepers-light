@@ -39,6 +39,8 @@ export const CLUES = {
       'Column after column: a date, a cash amount, and two initials — "M.K." — repeated for months.',
       '',
       'No cargo manifest. No explanation of what the money was for. The most recent entry is dated four days before he disappeared.',
+      '',
+      "Wedged into the binding, a second key — smaller than the one that opened this chest, and not shaped for any lock in the cottage. Whatever it opens, it isn't here.",
     ].join('\n'),
   },
 
@@ -134,6 +136,65 @@ export const CLUES = {
       "Dates are noted beside some of the x's, always a night or two either side of a new moon, when the water would be darkest. The handwriting matches the logbook.",
       '',
       "Whether the marks were made to keep a boat safe, or to keep track of something else entirely, the chart doesn't say.",
+    ].join('\n'),
+  },
+  // ---------------- Chapter 2: Deeper Waters (the sea cave) ----------------
+  // Same discipline as above, raised stakes: these four should deepen both
+  // readings and introduce one genuinely unresolved thread, not tip the
+  // balance toward either. Re-read against README's authoring note before
+  // editing.
+
+  OLD_ROURKE_LOGBOOK: {
+    id: 'oldrourkelogbook',
+    shortDescription: "Old Rourke's own logbook — decades old",
+    promptLabel: 'Examine the weathered logbook',
+    content: [
+      "The leather's cracked and soft with damp, the ink gone the color of rust in places — but the handwriting is careful, older than Elias's by decades.",
+      '',
+      'Most of it is unremarkable: storm damage, a broken davit, three weeks with no supply boat one winter. Whoever kept this record was thorough about the ordinary things.',
+      '',
+      'The last five entries are different. "The lamp doesn\'t need my hand on it some nights. It knows the rhythm better than I do now." Then, two nights later: "I keep hearing my name from the gallery when I know I\'m alone in the tower." The final entry, dated some six weeks before it simply stops: "I understand now why they never found the last one either. The light doesn\'t need me anymore."',
+      '',
+      "There's no name signed anywhere in the book. But the bell upstairs, and what's left of its inscription, make a guess easy enough.",
+    ].join('\n'),
+  },
+
+  SMUGGLING_CACHE: {
+    id: 'smugglingcache',
+    shortDescription: 'A hidden cache of unmarked crates',
+    promptLabel: 'Examine the crates',
+    content: [
+      "Stacked three deep against the back wall, half-covered by a tarp gone stiff with salt: a dozen crates and barrels, no shipping company markings, no customs stamps — the same absence of paperwork as the ledger in the cottage.",
+      '',
+      "But these aren't all the same age. Some of the wood is recent, pale where it's been handled. Other crates underneath are grayed and split, the rope binding them rotted through. A faded stencil on one of the oldest — mostly illegible — might be a date. If it is, it's from years before Elias ever took over the light.",
+      '',
+      "Whatever this arrangement was, it didn't start with him. Whether he inherited it, stumbled onto it, or started his own version of something older, nothing here says which.",
+    ].join('\n'),
+  },
+
+  THIRD_INITIALS: {
+    id: 'thirdinitials',
+    shortDescription: 'A second ledger page, water-stained',
+    promptLabel: 'Examine the loose ledger page',
+    content: [
+      "Tucked between two crates, folded small and gone soft with damp: a single page, torn from a book. The handwriting matches the hidden ledger from the cottage — same columns, same terse shorthand for dates and amounts.",
+      '',
+      'But the initials repeated down this page aren\'t "M.K." They\'re "T.H." — three letters, appearing a dozen times over what looks like a much longer span than the M.K. entries, going back further than Elias\'s tenure at the light.',
+      '',
+      "No name in the cottage, on the boat, or on the island so far matches. Whoever T.H. was — or is — this page doesn't say, and nothing else found yet explains it.",
+    ].join('\n'),
+  },
+
+  CAVE_WALL_MARKS: {
+    id: 'cavewallmarks',
+    shortDescription: 'Marks scratched into the cave wall',
+    promptLabel: 'Examine the marks on the wall',
+    content: [
+      "Deep gouges in the rock near the tunnel mouth, too regular to be natural — tally marks, dozens of them, grouped in fives, running the length of an arm's reach before stopping abruptly.",
+      '',
+      "Beneath them, a name was started and then scored through so hard it gouged the stone; only a few letters are legible before the rest is destroyed, deliberately, by whoever held the blade.",
+      '',
+      "Sailors mark tallies for all kinds of reasons — trips made, nights waited out, cargo counted. It could be exactly that. It could also be someone counting something else, and changing their mind partway through about wanting their name attached to it.",
     ].join('\n'),
   },
 };

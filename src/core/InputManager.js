@@ -73,6 +73,7 @@ export class InputManager {
       if (e.code === 'KeyE') this._emit('interact');
       if (e.code === 'Escape') this._emit('escape');
       if (e.code === 'KeyJ' || e.code === 'Tab') this._emit('journal');
+      if (e.code === 'KeyH') this._emit('hint');
     } else {
       this.keys.add(e.code);
     }

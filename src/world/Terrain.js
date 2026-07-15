@@ -7,12 +7,13 @@ import {
   LIGHTHOUSE,
   COTTAGE,
   BOATHOUSE,
+  CAVE,
   DOCK,
   PATH_WAYPOINTS,
   PATH_WIDTH,
 } from './layout.js';
 
-const PADS = [LIGHTHOUSE, COTTAGE, BOATHOUSE];
+const PADS = [LIGHTHOUSE, COTTAGE, BOATHOUSE, CAVE];
 
 const GRASS_A = new THREE.Color('#4a5d3a');
 const GRASS_B = new THREE.Color('#5c6f43');
