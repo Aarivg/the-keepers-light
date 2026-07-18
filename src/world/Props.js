@@ -35,6 +35,12 @@ export function buildProps(scene, terrain) {
   const colliders = [];
   const group = new THREE.Group();
 
+  // Perf (Phase 7): was 42 individual Mesh+unique-geometry objects (42 draw
+  // calls). Every rock is the same unit icosahedron with a per-instance
+  // transform (position/rotation/non-uniform Y scale) baked into its matrix
+  // instead of a unique geometry — two InstancedMesh draw calls (one per
+  // material) replace all of them, with identical placement/collision logic.
+  const rockTransforms = { light: [], dark: [] };
   const rockCount = 42;
   for (let i = 0; i < rockCount; i++) {
     let x, z, attempts = 0;
@@ -51,18 +57,37 @@ export function buildProps(scene, terrain) {
     if (y < -3) continue; // skip rocks that landed underwater
 
     const scale = 0.35 + rand() * 1.5;
-    const geo = new THREE.IcosahedronGeometry(scale, 0);
-    const rock = new THREE.Mesh(geo, rand() > 0.6 ? ROCK_MAT_DARK : ROCK_MAT);
-    rock.position.set(x, y + scale * 0.25, z);
-    rock.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
-    rock.scale.y = 0.7 + rand() * 0.4;
-    rock.castShadow = true;
-    rock.receiveShadow = true;
-    group.add(rock);
+    const isDark = rand() > 0.6;
+    (isDark ? rockTransforms.dark : rockTransforms.light).push({
+      position: new THREE.Vector3(x, y + scale * 0.25, z),
+      rotation: new THREE.Euler(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI),
+      scale: new THREE.Vector3(scale, scale * (0.7 + rand() * 0.4), scale),
+    });
 
     if (scale > 1.0) {
       colliders.push(boxCollider(x, y - 0.2, z, scale * 1.5, scale * 1.6, scale * 1.5));
     }
+  }
+
+  const rockGeo = new THREE.IcosahedronGeometry(1, 0); // unit sphere — per-instance scale carries the actual size
+  const dummy = new THREE.Object3D();
+  for (const [transforms, material] of [
+    [rockTransforms.light, ROCK_MAT],
+    [rockTransforms.dark, ROCK_MAT_DARK],
+  ]) {
+    if (!transforms.length) continue;
+    const instanced = new THREE.InstancedMesh(rockGeo, material, transforms.length);
+    transforms.forEach((t, i) => {
+      dummy.position.copy(t.position);
+      dummy.rotation.copy(t.rotation);
+      dummy.scale.copy(t.scale);
+      dummy.updateMatrix();
+      instanced.setMatrixAt(i, dummy.matrix);
+    });
+    instanced.instanceMatrix.needsUpdate = true;
+    instanced.castShadow = true;
+    instanced.receiveShadow = true;
+    group.add(instanced);
   }
 
   // A short garden fence along the seaward side of the cottage.
