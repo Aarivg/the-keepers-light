@@ -55,6 +55,15 @@ export class FirstPersonController {
     this._downVec = new THREE.Vector3(0, -1, 0);
     this._groundedY = 0;
 
+    // Perf (Phase 7): reused every frame instead of `new THREE.Vector2/3(...)`
+    // inside update()/_sampleGround()/_resolveCollisions() — this runs every
+    // frame the whole time the player is unpaused, so those were the
+    // hottest per-frame allocations in the codebase.
+    this._inputDir = new THREE.Vector2();
+    this._desired = new THREE.Vector2();
+    this._resolved = new THREE.Vector2();
+    this._rayOrigin = new THREE.Vector3();
+
     this._enabled = false;
   }
 
@@ -100,11 +109,19 @@ export class FirstPersonController {
     const { dx, dy } = this.input.consumeMouseDelta();
     if (dx || dy) this.handleMouseLook(dx, dy);
 
-    const strafe = (this.input.isDown('KeyD') ? 1 : 0) - (this.input.isDown('KeyA') ? 1 : 0);
-    const moveForward = (this.input.isDown('KeyW') ? 1 : 0) - (this.input.isDown('KeyS') ? 1 : 0);
+    // Arrow keys work as a second, fully interchangeable input scheme
+    // alongside WASD (Phase 8) — both are just OR'd into the same per-frame
+    // read, so holding one and switching to the other mid-stride is
+    // seamless (no separate state to reconcile, no stutter).
+    const strafe =
+      (this.input.isDown('KeyD') || this.input.isDown('ArrowRight') ? 1 : 0) -
+      (this.input.isDown('KeyA') || this.input.isDown('ArrowLeft') ? 1 : 0);
+    const moveForward =
+      (this.input.isDown('KeyW') || this.input.isDown('ArrowUp') ? 1 : 0) -
+      (this.input.isDown('KeyS') || this.input.isDown('ArrowDown') ? 1 : 0);
     const sprinting = this.input.isDown('ShiftLeft') || this.input.isDown('ShiftRight');
 
-    const inputDir = new THREE.Vector2(strafe, moveForward);
+    const inputDir = this._inputDir.set(strafe, moveForward);
     const hasInput = inputDir.lengthSq() > 0;
     if (hasInput) inputDir.normalize();
 
@@ -120,7 +137,7 @@ export class FirstPersonController {
     const moveX = (inputDir.x * cosYaw - inputDir.y * sinYaw) * this.currentSpeed * dt;
     const moveZ = (-(inputDir.x * sinYaw) - inputDir.y * cosYaw) * this.currentSpeed * dt;
 
-    const desired = new THREE.Vector2(this.position.x + moveX, this.position.z + moveZ);
+    const desired = this._desired.set(this.position.x + moveX, this.position.z + moveZ);
     const resolved = this._resolveCollisions(this.position.x, this.position.z, desired.x, desired.y);
 
     // The shoreline itself acts as an invisible boundary: if the resolved
@@ -180,7 +197,7 @@ export class FirstPersonController {
   _sampleGround(x, z) {
     const meshes = this.world.getGroundMeshes();
     if (!meshes.length) return null;
-    this._raycaster.set(new THREE.Vector3(x, 200, z), this._downVec);
+    this._raycaster.set(this._rayOrigin.set(x, 200, z), this._downVec);
     this._raycaster.far = 400;
     const hits = this._raycaster.intersectObjects(meshes, false);
     if (hits.length === 0) return null;
@@ -238,6 +255,6 @@ export class FirstPersonController {
       z *= scale;
     }
 
-    return new THREE.Vector2(x, z);
+    return this._resolved.set(x, z);
   }
 }

@@ -10,6 +10,8 @@ export class UIManager {
   constructor() {
     this.crosshair = document.getElementById('crosshair');
     this.promptEl = document.getElementById('prompt');
+    this.objectiveArrowEl = document.getElementById('objective-arrow');
+    this.objectiveArrowIconEl = document.getElementById('objective-arrow-icon');
     this.blockerEl = document.getElementById('blocker');
     this.startButton = document.getElementById('start-button');
     this.continueButton = document.getElementById('continue-button');
@@ -255,6 +257,18 @@ export class UIManager {
 
   hidePrompt() {
     this.promptEl.classList.add('hidden');
+  }
+
+  /** @param {number} angleDeg - bearing to the nearest objective, relative
+   * to where the player is currently facing (0 = straight ahead). */
+  showObjectiveIndicator(angleDeg) {
+    this.objectiveArrowIconEl.style.transform = `rotate(${angleDeg}deg)`;
+    this.objectiveArrowEl.classList.remove('hidden');
+    this.objectiveArrowEl.classList.add('visible');
+  }
+
+  hideObjectiveIndicator() {
+    this.objectiveArrowEl.classList.remove('visible');
   }
 
   showFeedback(text, durationMs = 2600) {
