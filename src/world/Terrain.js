@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ValueNoise2D, smoothstep, lerp, flatMaterial } from './utils.js';
 import { loadTexture } from './TextureLibrary.js';
 import {
@@ -215,9 +216,11 @@ export function buildTerrain(scene) {
   scene.add(waterMesh);
 
   // Dock — a simple raised plank platform sloping down toward the water,
-  // with a handful of piling posts for silhouette.
+  // with a handful of piling posts for silhouette. Perf (Phase 7): planks
+  // and pilings used to be ~28 separate draw calls; each instance's
+  // transform is now baked into its own geometry clone before merging, so
+  // the whole dock renders (and, for the planks, ground-raycasts) as 2.
   const dockGroup = new THREE.Group();
-  const dockSurfaces = [];
   const dockMat = flatMaterial({
     color: '#4a3a28',
     map: loadTexture('/generated/textures/wood.png'),
@@ -226,6 +229,7 @@ export function buildTerrain(scene) {
   const dockLength = DOCK.seaZ - DOCK.landZ;
   const plankCount = 16;
   const plankLength = dockLength / plankCount;
+  const plankGeometries = [];
   for (let i = 0; i < plankCount; i++) {
     const z = DOCK.landZ + i * plankLength + plankLength / 2;
     const t = i / (plankCount - 1);
@@ -233,31 +237,37 @@ export function buildTerrain(scene) {
     // Slight overlap (not a gap) between planks — the ground-follow raycast
     // must never find a hole here, or it reads as bare (underwater) terrain
     // just beneath the dock and freezes the player at the shoreline boundary.
-    const plank = new THREE.Mesh(new THREE.BoxGeometry(DOCK.width, 0.18, plankLength * 1.05), dockMat);
-    plank.position.set(DOCK.x, surfaceY, z);
-    plank.castShadow = true;
-    plank.receiveShadow = true;
-    dockGroup.add(plank);
-    dockSurfaces.push(plank);
+    const geo = new THREE.BoxGeometry(DOCK.width, 0.18, plankLength * 1.05);
+    geo.translate(DOCK.x, surfaceY, z);
+    plankGeometries.push(geo);
   }
+  const dockSurface = new THREE.Mesh(mergeGeometries(plankGeometries, false), dockMat);
+  dockSurface.castShadow = true;
+  dockSurface.receiveShadow = true;
+  dockGroup.add(dockSurface);
+
   const pilingMat = flatMaterial({ color: '#3a2f22', roughness: 1 });
   const pilingCount = Math.floor(dockLength / 6);
+  const pilingGeometries = [];
   for (let i = 0; i < pilingCount; i++) {
     const z = DOCK.landZ + 2 + i * 6.2;
     for (const side of [-1, 1]) {
-      const piling = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 5, 6), pilingMat);
-      piling.position.set(DOCK.x + side * (DOCK.width / 2 - 0.1), -1.5, z);
-      piling.castShadow = true;
-      dockGroup.add(piling);
+      const geo = new THREE.CylinderGeometry(0.16, 0.2, 5, 6);
+      geo.translate(DOCK.x + side * (DOCK.width / 2 - 0.1), -1.5, z);
+      pilingGeometries.push(geo);
     }
   }
+  const pilings = new THREE.Mesh(mergeGeometries(pilingGeometries, false), pilingMat);
+  pilings.castShadow = true;
+  dockGroup.add(pilings);
+
   scene.add(dockGroup);
 
   return {
     terrainMesh,
     waterMesh,
     dockGroup,
-    groundMeshes: [terrainMesh, ...dockSurfaces],
+    groundMeshes: [terrainMesh, dockSurface],
     shoreMinY: 0.55,
     heightAt,
     colorAt,

@@ -97,8 +97,12 @@ export function buildNPCs(scene, interactionSystem, uiManager, terrain, onTalk) 
     revealThomas,
     relocateForChapter3,
     update(dt, elapsed, activeNpcId) {
-      mara.userData.animate(elapsed, { talking: activeNpcId === 'mara' });
-      thomas.userData.animate(elapsed, { talking: activeNpcId === 'thomas' });
+      // Perf (Phase 7): skip animating a character nobody can see — mostly
+      // matters for Thomas, who exists (and was previously animated every
+      // frame regardless) from the very start but stays invisible until
+      // Chapter 2.
+      if (mara.visible) mara.userData.animate(elapsed, { talking: activeNpcId === 'mara' });
+      if (thomas.visible) thomas.userData.animate(elapsed, { talking: activeNpcId === 'thomas' });
     },
   };
 }

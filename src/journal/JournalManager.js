@@ -50,7 +50,9 @@ export class JournalManager {
   }
 
   setFlag(name) {
+    if (this._flags.has(name)) return; // avoid a redundant emit on a flag that's already set
     this._flags.add(name);
+    this._emit();
   }
 
   hasFlag(name) {
