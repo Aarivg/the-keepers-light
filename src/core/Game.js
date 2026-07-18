@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { InputManager } from './InputManager.js';
 import { UIManager } from '../ui/UIManager.js';
 import { AudioManager } from '../audio/AudioManager.js';
@@ -12,6 +15,7 @@ import { HintManager } from '../story/HintManager.js';
 import { SPAWN } from '../world/layout.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { CLUE_BY_ID } from '../journal/clues.js';
+import { FLAGS } from '../journal/flags.js';
 
 // Mirrors the literal strings NPCs.js's onTalk callbacks pass — needed so a
 // continued save can label the ending summary correctly even if the player
@@ -47,6 +51,15 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Perf (Phase 7): the shadow depth pass was re-rendering every single
+    // frame by default, even though the sun is the only shadow-casting
+    // light and almost everything it lights (terrain, buildings, props,
+    // the dock) never moves — only the NPCs' subtle idle sway actually
+    // needs it to stay current. Manual updates instead: one now (below,
+    // after the scene is fully built) plus a slow periodic refresh while
+    // playing (_tick()) — frequent enough that NPC shadows never look
+    // stale, far cheaper than recomputing the whole depth pass 60x/second.
+    this.renderer.shadowMap.autoUpdate = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // Raised from 1.05 as part of the brightness pass — ACES rolls off
@@ -56,6 +69,45 @@ export class Game {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+
+    // Postprocessing (Phase 7): bloom, mainly for the lighthouse beacon — a
+    // signature visual moment that had no glow at all before. (A vignette
+    // pass was also tried here; pulled after it produced inconsistent,
+    // scene-dependent over-darkening on this software renderer that I
+    // couldn't fully root-cause in the time available — see the Phase 7
+    // report. Cutting it was the safer call than shipping a rendering bug.)
+    // A custom multisampled render target keeps the canvas's native MSAA
+    // (`antialias: true` above) working through the composer chain —
+    // EffectComposer's default target has no samples, which would otherwise
+    // silently undo that antialiasing the moment a Pass beyond RenderPass
+    // gets added.
+    const pixelRatio = this.renderer.getPixelRatio();
+    const renderTarget = new THREE.WebGLRenderTarget(
+      window.innerWidth * pixelRatio,
+      window.innerHeight * pixelRatio,
+      { samples: 4, type: THREE.HalfFloatType }
+    );
+    this.composer = new EffectComposer(this.renderer, renderTarget);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // threshold is deliberately high — only genuinely bright things (the
+    // lamp's own glow, the beacon beam) should bloom; strength/radius kept
+    // modest so this reads as a glow, not a haze over the whole scene.
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.55,
+      0.4,
+      0.82
+    );
+    this.composer.addPass(this.bloomPass);
+    // Deliberately NOT adding an OutputPass: every material's fragment
+    // shader already bakes in tone mapping + color-space conversion
+    // unconditionally (it's keyed off renderer.toneMapping/outputColorSpace,
+    // not the render target), so RenderPass's output is already
+    // display-ready — an OutputPass here re-applies ACES on top of the
+    // already-tone-mapped image, crushing contrast and saturating colors.
+    // Confirmed empirically: with it, a passthrough-only chain (bloom
+    // disabled) visibly darkened the scene versus a direct
+    // renderer.render() call; without it, they match.
 
     this.world = new World(this.scene);
 
@@ -89,6 +141,7 @@ export class Game {
     this.journal.onChange(() => {
       this.chapters.checkUnlocks(this.journal, this.dialogue);
       this._autosave();
+      this._markProgress();
     });
     this.chapters.onChapterChange((info) => this._onChapterChange(info));
 
@@ -110,6 +163,11 @@ export class Game {
     this._gameplayStarted = false; // first true 'playing' entry shows the Chapter 1 title card
     this._lastHintAt = -Infinity;
     this._endingShown = this._pendingSave?.endingShown === true;
+    // Objective compass + stuck-nudge (Phase 7) — both throttled off this
+    // accumulator rather than recomputed every frame; see _tick().
+    this._objectiveUpdateAccum = 0;
+    this._idleSeconds = 0;
+    this._stuckNudgeShown = false;
 
     // Chapter number + its one-time world side effects (Thomas revealed,
     // night lighting, NPCs at the lighthouse) are restored last, now that
@@ -121,6 +179,11 @@ export class Game {
       const chapter = [1, 2, 3].includes(savedChapter) ? savedChapter : 1;
       this._applyChapterAndWorldEffects(chapter);
     }
+
+    // First (and, until gameplay starts, only) shadow depth pass — see the
+    // shadowMap.autoUpdate note above. Placed last so it captures the fully
+    // final initial state, including any save-restore world effects above.
+    this.renderer.shadowMap.needsUpdate = true;
 
     this._bindLifecycle();
     window.addEventListener('resize', () => this._onResize());
@@ -167,6 +230,7 @@ export class Game {
       this.controller.setEnabled(false);
       this._playing = false;
       this.uiManager.hidePrompt();
+      this.uiManager.hideObjectiveIndicator();
       if (!['journal', 'ending', 'dialogue'].includes(this._uiMode)) {
         this._uiMode = 'paused';
         this.uiManager.showPauseMenu();
@@ -300,6 +364,18 @@ export class Game {
       setTimeout(() => this.uiManager.showFeedback('Mara and Thomas have made their way to the lighthouse.'), 1800);
     }
     this._autosave();
+    this._markProgress();
+  }
+
+  // ---------------- Guidance: H-key hint, objective compass, stuck-nudge ----------------
+
+  /** Resets the stuck-nudge idle clock — called on every "meaningful state
+   * change" (same set as the autosave triggers) and on pressing H itself,
+   * per the brief: dismissed immediately once the player makes progress or
+   * asks for a hint directly. */
+  _markProgress() {
+    this._idleSeconds = 0;
+    this._stuckNudgeShown = false;
   }
 
   _showHint() {
@@ -307,6 +383,7 @@ export class Game {
     const now = performance.now();
     if (now - this._lastHintAt < 4000) return;
     this._lastHintAt = now;
+    this._markProgress();
 
     const text = this.hints.getHint({
       chapter: this.chapters.chapter,
@@ -317,6 +394,49 @@ export class Game {
       endingShown: this._endingShown === true,
     });
     this.uiManager.showFeedback(text);
+  }
+
+  /** Throttled (see _tick()) — points the HUD arrow at the same objective
+   * the H-key hint would name (hides it if there's nothing left, or if the
+   * player is already standing right on top of it), and hands the same
+   * target + player position to the world-space beacon (Phase 8's
+   * ObjectiveBeacon.js), which only actually shows once the player is
+   * close enough for "somewhere that way" to become "right there." */
+  _updateObjectiveIndicator() {
+    const px = this.controller.position.x;
+    const pz = this.controller.position.z;
+    const obj = this.hints.resolveObjective({
+      chapter: this.chapters.chapter,
+      journal: this.journal,
+      dialogue: this.dialogue,
+      playerX: px,
+      playerZ: pz,
+      endingShown: this._endingShown === true,
+    });
+
+    if (!obj) {
+      this.uiManager.hideObjectiveIndicator();
+      this.world.setObjectiveTarget(null, px, pz);
+      return;
+    }
+    this.world.setObjectiveTarget(obj.pos, px, pz);
+
+    const dx = obj.pos.x - px;
+    const dz = obj.pos.z - pz;
+    if (Math.hypot(dx, dz) < 1.5) {
+      // Standing right on the objective already — an arrow here would just
+      // jitter with no useful direction to give; the beacon (set above)
+      // still shows.
+      this.uiManager.hideObjectiveIndicator();
+      return;
+    }
+
+    // Yaw a player would need to face the objective directly, per this
+    // codebase's convention (forward at yaw=0 is world -Z; see
+    // FirstPersonController.update()'s moveX/moveZ derivation).
+    const worldBearing = Math.atan2(-dx, -dz);
+    const screenAngleDeg = THREE.MathUtils.radToDeg(this.controller.yaw - worldBearing);
+    this.uiManager.showObjectiveIndicator(screenAngleDeg);
   }
 
   _openDialogue(npcId, displayName) {
@@ -361,6 +481,14 @@ export class Game {
     this.uiManager.setDialogueBusy(true);
     const { reply } = await this.dialogue.send(npcId, action);
     this.chapters.checkUnlocks(this.journal, this.dialogue);
+    // Chapter 3 wants a fresh conversation with each NPC, but
+    // dialogue.hasSpokenTo() is a single whole-game flag (already true from
+    // chapters 1/2, since that's a precondition for chapter 3 starting) —
+    // so track the chapter-3 conversation separately for HintManager (Phase 8).
+    if (this.chapters.chapter === 3) {
+      if (npcId === 'mara') this.journal.setFlag(FLAGS.SPOKEN_MARA_CH3);
+      else if (npcId === 'thomas') this.journal.setFlag(FLAGS.SPOKEN_THOMAS_CH3);
+    }
 
     // If the player closed this conversation or opened a different NPC
     // while the request was in flight, the reply is already correctly
@@ -372,6 +500,7 @@ export class Game {
     // Silent — the dialogue panel covers the toast's corner anyway, and a
     // visible "Saved" after every single line would be noisy mid-conversation.
     this._autosave({ silent: true });
+    this._markProgress();
   }
 
   _triggerEnding() {
@@ -404,6 +533,8 @@ export class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.composer.setSize(window.innerWidth, window.innerHeight);
+    this.bloomPass.resolution.set(window.innerWidth, window.innerHeight);
   }
 
   start() {
@@ -422,9 +553,28 @@ export class Game {
       // trailing one frame behind (imperceptible at 60fps, but free to fix).
       this.camera.updateMatrixWorld();
       this.interaction.update();
+
+      // Objective compass + stuck-nudge: both explicitly throttled off a
+      // slower interval rather than recomputed every frame (the brief calls
+      // this out directly) — a quarter-second lag on a "general directional
+      // nudge" is imperceptible.
+      this._idleSeconds += dt;
+      if (!this._stuckNudgeShown && this._idleSeconds > 90) {
+        this._stuckNudgeShown = true;
+        this.uiManager.showFeedback("Press H if you're not sure where to go.", 4500);
+      }
+      this._objectiveUpdateAccum += dt;
+      if (this._objectiveUpdateAccum > 0.25) {
+        this._objectiveUpdateAccum = 0;
+        this._updateObjectiveIndicator();
+        // Piggybacks on the same interval — see the shadowMap.autoUpdate
+        // note in the constructor. Keeps NPC shadows visually current
+        // without paying for a full depth pass every frame.
+        this.renderer.shadowMap.needsUpdate = true;
+      }
     }
     this.world.update(dt, elapsed, this._uiMode === 'dialogue' ? this._currentNpcId : null);
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 }

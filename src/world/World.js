@@ -8,6 +8,7 @@ import { buildBoathouse } from './buildings/Boathouse.js';
 import { buildCave } from './buildings/Cave.js';
 import { buildEndingTrigger } from './EndingTrigger.js';
 import { buildNPCs } from './NPCs.js';
+import { buildObjectiveBeacon } from './ObjectiveBeacon.js';
 import { WORLD_BOUND_RADIUS } from './layout.js';
 
 const SKY_ZENITH = new THREE.Color('#232a3d');
@@ -53,6 +54,12 @@ export class World {
     this._groundMeshes = [...this._terrain.groundMeshes];
     this._updatables = [];
 
+    // Phase 8: the world-space half of the guidance system — see
+    // ObjectiveBeacon.js. Built here (not in attachInteraction()) since it
+    // has nothing to do with clue registration, just scene presence.
+    this._beacon = buildObjectiveBeacon(scene);
+    this._updatables.push(this._beacon);
+
     this._interactableBuildingsPending = []; // filled by attachInteraction()
   }
 
@@ -73,10 +80,16 @@ export class World {
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 260;
-    sun.shadow.camera.left = -140;
-    sun.shadow.camera.right = 140;
-    sun.shadow.camera.top = 140;
-    sun.shadow.camera.bottom = -140;
+    // Tightened from ±140 (Phase 7) — the same 2048 map spread over a
+    // smaller frustum reads noticeably crisper, at zero extra render cost.
+    // ±120 still comfortably covers the island (radius 95) and Props.js's
+    // scattered rocks (out to distance ~120 from origin); only the rare
+    // rock right at that outer edge could lose its shadow, which isn't
+    // worth trading shadow sharpness for everything else.
+    sun.shadow.camera.left = -120;
+    sun.shadow.camera.right = 120;
+    sun.shadow.camera.top = 120;
+    sun.shadow.camera.bottom = -120;
     sun.shadow.bias = -0.0015;
     this.scene.add(sun);
     this.sun = sun;
@@ -136,6 +149,15 @@ export class World {
     }
     this._colliders.push(...props.colliders);
     this._updatables.push(props);
+  }
+
+  /** Phase 8 guidance system — called (throttled) from Game.js alongside the
+   * HUD arrow update. `pos` is the resolved objective's exact position (or
+   * null when there's nothing left to point at); the beacon only actually
+   * shows once the player is within its own proximity radius of it. */
+  setObjectiveTarget(pos, playerX, playerZ) {
+    this._beacon.setTarget(pos);
+    this._beacon.setPlayerPosition(playerX, playerZ);
   }
 
   /** Chapter 2 transition: Thomas "arrives" at the cottage — see NPCs.js. */

@@ -13,6 +13,11 @@
       <div id="hud">
         <div id="crosshair"></div>
         <div id="prompt" class="hidden"></div>
+        <div id="objective-arrow" class="hidden" title="Points toward what's left to do">
+          <svg id="objective-arrow-icon" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+            <polygon points="32,4 58,54 32,42 6,54" />
+          </svg>
+        </div>
       </div>
 
       <div id="chapter-card" class="hidden">
@@ -41,7 +46,7 @@
             <button id="continue-button" class="hidden">Continue</button>
             <button id="start-button">Click to begin</button>
           </div>
-          <p class="hint">WASD to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; J for journal &middot; H for a hint &middot; Esc to pause</p>
+          <p class="hint">WASD or arrow keys to move &middot; Mouse to look &middot; Shift to sprint &middot; E to interact &middot; J for journal &middot; H for a hint &middot; Esc to pause</p>
         </div>
       </div>
 
@@ -64,7 +69,7 @@
             <button id="save-button">Save</button>
             <button id="resume-button">Resume</button>
           </div>
-          <p class="hint">Press Esc to resume &middot; Press J for journal</p>
+          <p class="hint">WASD or arrow keys to move &middot; Press Esc to resume &middot; Press J for journal</p>
         </div>
       </div>
 
