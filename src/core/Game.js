@@ -395,8 +395,11 @@ export class Game {
   }
 
   /** Throttled (see _tick()) — points the HUD arrow at the same objective
-   * the H-key hint would name, hiding it if there's nothing left or if the
-   * player is already standing right on top of it. */
+   * the H-key hint would name (hides it if there's nothing left, or if the
+   * player is already standing right on top of it), and hands the same
+   * target + player position to the world-space beacon (Phase 8's
+   * ObjectiveBeacon.js), which only actually shows once the player is
+   * close enough for "somewhere that way" to become "right there." */
   _updateObjectiveIndicator() {
     const px = this.controller.position.x;
     const pz = this.controller.position.z;
@@ -411,14 +414,17 @@ export class Game {
 
     if (!obj) {
       this.uiManager.hideObjectiveIndicator();
+      this.world.setObjectiveTarget(null, px, pz);
       return;
     }
+    this.world.setObjectiveTarget(obj.pos, px, pz);
 
     const dx = obj.pos.x - px;
     const dz = obj.pos.z - pz;
     if (Math.hypot(dx, dz) < 1.5) {
       // Standing right on the objective already — an arrow here would just
-      // jitter with no useful direction to give.
+      // jitter with no useful direction to give; the beacon (set above)
+      // still shows.
       this.uiManager.hideObjectiveIndicator();
       return;
     }
