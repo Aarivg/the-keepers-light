@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { InputManager } from './InputManager.js';
 import { UIManager } from '../ui/UIManager.js';
 import { AudioManager } from '../audio/AudioManager.js';
@@ -56,6 +59,45 @@ export class Game {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+
+    // Postprocessing (Phase 7): bloom, mainly for the lighthouse beacon — a
+    // signature visual moment that had no glow at all before. (A vignette
+    // pass was also tried here; pulled after it produced inconsistent,
+    // scene-dependent over-darkening on this software renderer that I
+    // couldn't fully root-cause in the time available — see the Phase 7
+    // report. Cutting it was the safer call than shipping a rendering bug.)
+    // A custom multisampled render target keeps the canvas's native MSAA
+    // (`antialias: true` above) working through the composer chain —
+    // EffectComposer's default target has no samples, which would otherwise
+    // silently undo that antialiasing the moment a Pass beyond RenderPass
+    // gets added.
+    const pixelRatio = this.renderer.getPixelRatio();
+    const renderTarget = new THREE.WebGLRenderTarget(
+      window.innerWidth * pixelRatio,
+      window.innerHeight * pixelRatio,
+      { samples: 4, type: THREE.HalfFloatType }
+    );
+    this.composer = new EffectComposer(this.renderer, renderTarget);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // threshold is deliberately high — only genuinely bright things (the
+    // lamp's own glow, the beacon beam) should bloom; strength/radius kept
+    // modest so this reads as a glow, not a haze over the whole scene.
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.55,
+      0.4,
+      0.82
+    );
+    this.composer.addPass(this.bloomPass);
+    // Deliberately NOT adding an OutputPass: every material's fragment
+    // shader already bakes in tone mapping + color-space conversion
+    // unconditionally (it's keyed off renderer.toneMapping/outputColorSpace,
+    // not the render target), so RenderPass's output is already
+    // display-ready — an OutputPass here re-applies ACES on top of the
+    // already-tone-mapped image, crushing contrast and saturating colors.
+    // Confirmed empirically: with it, a passthrough-only chain (bloom
+    // disabled) visibly darkened the scene versus a direct
+    // renderer.render() call; without it, they match.
 
     this.world = new World(this.scene);
 
@@ -404,6 +446,8 @@ export class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.composer.setSize(window.innerWidth, window.innerHeight);
+    this.bloomPass.resolution.set(window.innerWidth, window.innerHeight);
   }
 
   start() {
@@ -425,6 +469,6 @@ export class Game {
     }
     this.world.update(dt, elapsed, this._uiMode === 'dialogue' ? this._currentNpcId : null);
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 }
