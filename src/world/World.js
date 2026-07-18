@@ -73,10 +73,16 @@ export class World {
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 260;
-    sun.shadow.camera.left = -140;
-    sun.shadow.camera.right = 140;
-    sun.shadow.camera.top = 140;
-    sun.shadow.camera.bottom = -140;
+    // Tightened from ±140 (Phase 7) — the same 2048 map spread over a
+    // smaller frustum reads noticeably crisper, at zero extra render cost.
+    // ±120 still comfortably covers the island (radius 95) and Props.js's
+    // scattered rocks (out to distance ~120 from origin); only the rare
+    // rock right at that outer edge could lose its shadow, which isn't
+    // worth trading shadow sharpness for everything else.
+    sun.shadow.camera.left = -120;
+    sun.shadow.camera.right = 120;
+    sun.shadow.camera.top = 120;
+    sun.shadow.camera.bottom = -120;
     sun.shadow.bias = -0.0015;
     this.scene.add(sun);
     this.sun = sun;
