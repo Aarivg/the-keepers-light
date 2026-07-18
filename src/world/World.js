@@ -8,6 +8,7 @@ import { buildBoathouse } from './buildings/Boathouse.js';
 import { buildCave } from './buildings/Cave.js';
 import { buildEndingTrigger } from './EndingTrigger.js';
 import { buildNPCs } from './NPCs.js';
+import { buildObjectiveBeacon } from './ObjectiveBeacon.js';
 import { WORLD_BOUND_RADIUS } from './layout.js';
 
 const SKY_ZENITH = new THREE.Color('#232a3d');
@@ -52,6 +53,12 @@ export class World {
     this._colliders = [];
     this._groundMeshes = [...this._terrain.groundMeshes];
     this._updatables = [];
+
+    // Phase 8: the world-space half of the guidance system — see
+    // ObjectiveBeacon.js. Built here (not in attachInteraction()) since it
+    // has nothing to do with clue registration, just scene presence.
+    this._beacon = buildObjectiveBeacon(scene);
+    this._updatables.push(this._beacon);
 
     this._interactableBuildingsPending = []; // filled by attachInteraction()
   }
@@ -142,6 +149,15 @@ export class World {
     }
     this._colliders.push(...props.colliders);
     this._updatables.push(props);
+  }
+
+  /** Phase 8 guidance system — called (throttled) from Game.js alongside the
+   * HUD arrow update. `pos` is the resolved objective's exact position (or
+   * null when there's nothing left to point at); the beacon only actually
+   * shows once the player is within its own proximity radius of it. */
+  setObjectiveTarget(pos, playerX, playerZ) {
+    this._beacon.setTarget(pos);
+    this._beacon.setPlayerPosition(playerX, playerZ);
   }
 
   /** Chapter 2 transition: Thomas "arrives" at the cottage — see NPCs.js. */
