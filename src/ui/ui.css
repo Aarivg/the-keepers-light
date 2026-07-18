@@ -82,6 +82,49 @@ html, body {
   display: none !important;
 }
 
+/* ---------- Objective arrow (Phase 8) — an unmissable directional pointer,
+   replacing Phase 7's subtle corner compass after playtesting found that
+   too easy to miss while actually moving. Fixed high up, centered, well
+   clear of the crosshair (center), the interaction prompt (58% top) and the
+   feedback/save toasts (72% top / bottom-right) — see the collision check
+   in the Phase 8 verification pass. Only visible when there's an unclaimed
+   objective to point toward and the player isn't already standing on it. ---------- */
+
+#objective-arrow {
+  position: absolute;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+#objective-arrow.visible {
+  opacity: 1;
+}
+
+#objective-arrow-icon {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.4s ease;
+  animation: objective-arrow-pulse 1.8s ease-in-out infinite;
+}
+
+#objective-arrow-icon polygon {
+  fill: #ffd682;
+  stroke: #241c10;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+@keyframes objective-arrow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 7px rgba(255, 214, 130, 0.9)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.85)); }
+  50% { filter: drop-shadow(0 0 13px rgba(255, 214, 130, 1)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.85)); }
+}
+
 /* ---------- Feedback toast (placeholder interaction response) ---------- */
 
 #feedback-toast {
