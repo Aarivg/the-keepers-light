@@ -50,6 +50,14 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Perf (Phase 7): the shadow depth pass was re-rendering every single
+    // frame by default, even though the sun is the only shadow-casting
+    // light and almost everything it lights (terrain, buildings, props,
+    // the dock) never moves — only the NPCs' subtle idle sway actually
+    // needs it to stay current. Manual updates instead: one now (below,
+    // after the scene is fully built), with a periodic refresh added once
+    // there's a reason to need one mid-play.
+    this.renderer.shadowMap.autoUpdate = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // Raised from 1.05 as part of the brightness pass — ACES rolls off
@@ -163,6 +171,11 @@ export class Game {
       const chapter = [1, 2, 3].includes(savedChapter) ? savedChapter : 1;
       this._applyChapterAndWorldEffects(chapter);
     }
+
+    // First (and, until gameplay starts, only) shadow depth pass — see the
+    // shadowMap.autoUpdate note above. Placed last so it captures the fully
+    // final initial state, including any save-restore world effects above.
+    this.renderer.shadowMap.needsUpdate = true;
 
     this._bindLifecycle();
     window.addEventListener('resize', () => this._onResize());
