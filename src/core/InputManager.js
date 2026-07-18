@@ -65,8 +65,10 @@ export class InputManager {
   _onKeyDown(e) {
     // Tab would otherwise cycle focus off the canvas (and, per spec, drop
     // pointer lock along with it) — stop that so it can double as a
-    // journal-toggle key like the brief asks for.
-    if (e.code === 'Tab') e.preventDefault();
+    // journal-toggle key like the brief asks for. Arrow keys have no other
+    // use in this game, so prevent their default (page-scroll) behavior too
+    // — matters mainly while not pointer-locked (paused, menus).
+    if (e.code === 'Tab' || e.code.startsWith('Arrow')) e.preventDefault();
 
     if (!this.keys.has(e.code)) {
       this.keys.add(e.code);
