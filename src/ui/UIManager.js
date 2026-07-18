@@ -263,6 +263,7 @@ export class UIManager {
    * to where the player is currently facing (0 = straight ahead). */
   showObjectiveIndicator(angleDeg) {
     this.objectiveArrowIconEl.style.transform = `rotate(${angleDeg}deg)`;
+    this.objectiveArrowEl.classList.remove('hidden');
     this.objectiveArrowEl.classList.add('visible');
   }
 
