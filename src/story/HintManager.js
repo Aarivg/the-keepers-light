@@ -159,10 +159,14 @@ export class HintManager {
     }
 
     if (chapter === 3) {
-      if (!dialogue.hasSpokenTo('mara')) {
+      // dialogue.hasSpokenTo() is a single whole-game flag, already true
+      // from chapters 1/2 (a precondition for chapter 3 even starting) — so
+      // these use the chapter-3-scoped flags Game.js sets instead (Phase 8
+      // fix; see flags.js).
+      if (!journal.hasFlag(FLAGS.SPOKEN_MARA_CH3)) {
         return { pos: MARA_CHAPTER3_POSITION, text: "Mara's here, at the lighthouse. Talk to her before this ends." };
       }
-      if (!dialogue.hasSpokenTo('thomas')) {
+      if (!journal.hasFlag(FLAGS.SPOKEN_THOMAS_CH3)) {
         return { pos: THOMAS_CHAPTER3_POSITION, text: 'Thomas is here too, at the lighthouse. Talk to him before this ends.' };
       }
       // Both spoken to, everything found — the only thing left is the
