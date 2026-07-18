@@ -139,6 +139,7 @@ export class Game {
     this.journal.onChange(() => {
       this.chapters.checkUnlocks(this.journal, this.dialogue);
       this._autosave();
+      this._markProgress();
     });
     this.chapters.onChapterChange((info) => this._onChapterChange(info));
 
@@ -160,6 +161,11 @@ export class Game {
     this._gameplayStarted = false; // first true 'playing' entry shows the Chapter 1 title card
     this._lastHintAt = -Infinity;
     this._endingShown = this._pendingSave?.endingShown === true;
+    // Objective compass + stuck-nudge (Phase 7) — both throttled off this
+    // accumulator rather than recomputed every frame; see _tick().
+    this._objectiveUpdateAccum = 0;
+    this._idleSeconds = 0;
+    this._stuckNudgeShown = false;
 
     // Chapter number + its one-time world side effects (Thomas revealed,
     // night lighting, NPCs at the lighthouse) are restored last, now that
@@ -222,6 +228,7 @@ export class Game {
       this.controller.setEnabled(false);
       this._playing = false;
       this.uiManager.hidePrompt();
+      this.uiManager.hideObjectiveIndicator();
       if (!['journal', 'ending', 'dialogue'].includes(this._uiMode)) {
         this._uiMode = 'paused';
         this.uiManager.showPauseMenu();
@@ -355,6 +362,18 @@ export class Game {
       setTimeout(() => this.uiManager.showFeedback('Mara and Thomas have made their way to the lighthouse.'), 1800);
     }
     this._autosave();
+    this._markProgress();
+  }
+
+  // ---------------- Guidance: H-key hint, objective compass, stuck-nudge ----------------
+
+  /** Resets the stuck-nudge idle clock — called on every "meaningful state
+   * change" (same set as the autosave triggers) and on pressing H itself,
+   * per the brief: dismissed immediately once the player makes progress or
+   * asks for a hint directly. */
+  _markProgress() {
+    this._idleSeconds = 0;
+    this._stuckNudgeShown = false;
   }
 
   _showHint() {
@@ -362,6 +381,7 @@ export class Game {
     const now = performance.now();
     if (now - this._lastHintAt < 4000) return;
     this._lastHintAt = now;
+    this._markProgress();
 
     const text = this.hints.getHint({
       chapter: this.chapters.chapter,
@@ -372,6 +392,43 @@ export class Game {
       endingShown: this._endingShown === true,
     });
     this.uiManager.showFeedback(text);
+  }
+
+  /** Throttled (see _tick()) — points the HUD arrow at the same objective
+   * the H-key hint would name, hiding it if there's nothing left or if the
+   * player is already standing right on top of it. */
+  _updateObjectiveIndicator() {
+    const px = this.controller.position.x;
+    const pz = this.controller.position.z;
+    const obj = this.hints.resolveObjective({
+      chapter: this.chapters.chapter,
+      journal: this.journal,
+      dialogue: this.dialogue,
+      playerX: px,
+      playerZ: pz,
+      endingShown: this._endingShown === true,
+    });
+
+    if (!obj) {
+      this.uiManager.hideObjectiveIndicator();
+      return;
+    }
+
+    const dx = obj.pos.x - px;
+    const dz = obj.pos.z - pz;
+    if (Math.hypot(dx, dz) < 1.5) {
+      // Standing right on the objective already — an arrow here would just
+      // jitter with no useful direction to give.
+      this.uiManager.hideObjectiveIndicator();
+      return;
+    }
+
+    // Yaw a player would need to face the objective directly, per this
+    // codebase's convention (forward at yaw=0 is world -Z; see
+    // FirstPersonController.update()'s moveX/moveZ derivation).
+    const worldBearing = Math.atan2(-dx, -dz);
+    const screenAngleDeg = THREE.MathUtils.radToDeg(this.controller.yaw - worldBearing);
+    this.uiManager.showObjectiveIndicator(screenAngleDeg);
   }
 
   _openDialogue(npcId, displayName) {
@@ -427,6 +484,7 @@ export class Game {
     // Silent — the dialogue panel covers the toast's corner anyway, and a
     // visible "Saved" after every single line would be noisy mid-conversation.
     this._autosave({ silent: true });
+    this._markProgress();
   }
 
   _triggerEnding() {
@@ -479,6 +537,25 @@ export class Game {
       // trailing one frame behind (imperceptible at 60fps, but free to fix).
       this.camera.updateMatrixWorld();
       this.interaction.update();
+
+      // Objective compass + stuck-nudge: both explicitly throttled off a
+      // slower interval rather than recomputed every frame (the brief calls
+      // this out directly) — a quarter-second lag on a "general directional
+      // nudge" is imperceptible.
+      this._idleSeconds += dt;
+      if (!this._stuckNudgeShown && this._idleSeconds > 90) {
+        this._stuckNudgeShown = true;
+        this.uiManager.showFeedback("Press H if you're not sure where to go.", 4500);
+      }
+      this._objectiveUpdateAccum += dt;
+      if (this._objectiveUpdateAccum > 0.25) {
+        this._objectiveUpdateAccum = 0;
+        this._updateObjectiveIndicator();
+        // Piggybacks on the same interval — see the shadowMap.autoUpdate
+        // note in the constructor. Keeps NPC shadows visually current
+        // without paying for a full depth pass every frame.
+        this.renderer.shadowMap.needsUpdate = true;
+      }
     }
     this.world.update(dt, elapsed, this._uiMode === 'dialogue' ? this._currentNpcId : null);
 
