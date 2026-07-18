@@ -23,6 +23,13 @@ export class InteractionSystem {
     this._raycaster.far = maxRange + 2;
     this._current = null;
 
+    // Perf (Phase 7): both rebuilt only on register/unregister, not every
+    // frame — update() used to spread _meshToEntry's keys into a fresh array
+    // and allocate a fresh screen-center Vector2 on every single frame,
+    // regardless of whether the registry had changed since the last one.
+    this._targets = [];
+    this._screenCenter = new THREE.Vector2(0, 0);
+
     this._unsubscribe = input.onAction('interact', () => this._onInteractPressed());
   }
 
@@ -45,6 +52,7 @@ export class InteractionSystem {
       if (child.isMesh) this._meshToEntry.set(child, entry);
     });
     object.userData.interactable = true;
+    this._rebuildTargets();
     return entry;
   }
 
@@ -52,15 +60,19 @@ export class InteractionSystem {
     const idx = this._registry.findIndex((e) => e.object === object);
     if (idx !== -1) this._registry.splice(idx, 1);
     object.traverse((child) => this._meshToEntry.delete(child));
+    this._rebuildTargets();
+  }
+
+  _rebuildTargets() {
+    this._targets = [...this._meshToEntry.keys()];
   }
 
   update() {
-    const targets = [...this._meshToEntry.keys()];
     this._current = null;
 
-    if (targets.length) {
-      this._raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-      const hits = this._raycaster.intersectObjects(targets, false);
+    if (this._targets.length) {
+      this._raycaster.setFromCamera(this._screenCenter, this.camera);
+      const hits = this._raycaster.intersectObjects(this._targets, false);
       for (const hit of hits) {
         const entry = this._meshToEntry.get(hit.object);
         if (entry && hit.distance <= entry.range) {
