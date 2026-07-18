@@ -15,6 +15,7 @@ import { HintManager } from '../story/HintManager.js';
 import { SPAWN } from '../world/layout.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { CLUE_BY_ID } from '../journal/clues.js';
+import { FLAGS } from '../journal/flags.js';
 
 // Mirrors the literal strings NPCs.js's onTalk callbacks pass — needed so a
 // continued save can label the ending summary correctly even if the player
@@ -479,6 +480,14 @@ export class Game {
     this.uiManager.setDialogueBusy(true);
     const { reply } = await this.dialogue.send(npcId, action);
     this.chapters.checkUnlocks(this.journal, this.dialogue);
+    // Chapter 3 wants a fresh conversation with each NPC, but
+    // dialogue.hasSpokenTo() is a single whole-game flag (already true from
+    // chapters 1/2, since that's a precondition for chapter 3 starting) —
+    // so track the chapter-3 conversation separately for HintManager (Phase 8).
+    if (this.chapters.chapter === 3) {
+      if (npcId === 'mara') this.journal.setFlag(FLAGS.SPOKEN_MARA_CH3);
+      else if (npcId === 'thomas') this.journal.setFlag(FLAGS.SPOKEN_THOMAS_CH3);
+    }
 
     // If the player closed this conversation or opened a different NPC
     // while the request was in flight, the reply is already correctly
